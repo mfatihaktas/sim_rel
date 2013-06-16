@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<scheduling>
+    <session number="1">
+    		<dpid connection="1"> <!-- Switch 11 -->
+    			<ip src="10.0.0.2" dst="10.0.0.1"/>
+    			<forward_to_port>2<forward_to_port/>
+    			<duration>50<duration/>
+    		</dpid> 
+    </session>
+    <session number="2">
+        <rank>4</rank>
+        <year>2011</year>
+        <gdppc>59900</gdppc>
+        <neighbor name="Malaysia" direction="N"/>
+    </session>
+</scheduling>

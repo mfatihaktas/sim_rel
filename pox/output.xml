@@ -1,0 +1,8 @@
+<scheduling>
+    <session number="2">
+        <rank>4</rank>
+        <year>2011</year>
+        <gdppc>59900</gdppc>
+        <neighbor direction="N" name="Malaysia" />
+    </session>
+</scheduling>

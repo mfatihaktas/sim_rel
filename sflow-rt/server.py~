@@ -1,0 +1,39 @@
+import socket
+import threading
+import SocketServer, json
+
+ifi_map = {}
+class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        global ifi_map
+        data = self.request.recv(1024)
+        ifi_map = json.loads(data)
+        cur_thread = threading.current_thread()
+        #response = "{}: {}".format(cur_thread.name, data)
+        response = "OK"
+        self.request.sendall(response)
+
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+def main():
+  # Port 0 means to select an arbitrary unused port
+  HOST, PORT = '192.168.56.1', 9999 #socket.gethostbyname(socket.gethostname()), 9999
+  
+  server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
+  #ip, port = server.server_address
+
+  # Start a thread with the server -- that thread will then start one
+  # more thread for each request
+  server_thread = threading.Thread(target=server.serve_forever)
+  # Exit the server thread when the main thread terminates
+  server_thread.daemon = True
+  server_thread.start()
+  print "Server loop running in thread:", server_thread.name
+  
+  raw_input('Enter')
+  #server.shutdown()
+
+
+if __name__ == "__main__":
+  main()

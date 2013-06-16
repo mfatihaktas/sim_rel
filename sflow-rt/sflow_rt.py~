@@ -1,0 +1,76 @@
+import requests, json, os
+
+class NetworkSensor(object):
+  def __init__ (self):
+    self.groups = {'external':['10.0.0.0/8'],'internal':['10.0.0.0/8']}
+    self.flows = {'keys':'ipsource,ipdestination','value':'bytes','filter':''} 
+    #'filter':'sourcegroup=external&destinationgroup=internal'
+    self.threshold = {'metric':'incoming','value':1}
+    self.target = 'http://localhost:8008'
+    self.eventurl = self.target + '/events/json?maxEvents=10&timeout=60'
+
+  def global_event_listener_push(self):
+    r = requests.put(self.target + '/group/json',data=json.dumps(self.groups))
+    r = requests.put(self.target + '/flow/incoming/json',data=json.dumps(self.flows))
+    r = requests.put(self.target + '/threshold/incoming/json',data=json.dumps(self.threshold))
+
+  def listen_event_fire(self):
+    eventID = -1
+    while 1 == 1:
+      r = requests.get(self.eventurl + '&eventID=' + str(eventID))
+      if r.status_code != 200: break
+      events = r.json()
+      if len(events) == 0: continue
+
+      eventID = events[0]["eventID"]
+      for e in events:
+        if 'incoming' == e['metric']:
+          r = requests.get(self.target + '/metric/' + e['agent'] + '/' 
+          + e['dataSource'] + '.' + e['metric'] + '/json')
+          metric = r.json()
+          if len(metric) > 0:
+            try:
+              print metric[0]["topKeys"][0]["key"]
+              print 'metric: \n', metric, '\n'
+            except KeyError:
+              continue
+
+  # mininet mapping between sFlow ifIndex numbers and switch/port names
+  def map_ifi():
+    ifi_to_dev = {};
+    dev_to_port = {};
+    dev_path = '/sys/devices/virtual/net/';
+    devs = os.walk(dev_path).next()[1]
+
+    for dev in devs:
+      f = open(dev_path + dev + '/ifindex')
+      ifi = (f.readlines())[0].strip()
+      print ifi
+      f.close()
+      ifi_to_dev[ifi] = dev
+      try:
+        f=open(dev_path + dev + '/brport/port_no')
+        port = (f.readlines())[0].strip('0x')
+        f.close()
+      except IOError:
+        continue
+      dev_to_port[dev] = port
+
+    print ifi_to_dev
+    print dev_to_port
+
+def main():
+  ns = NetworkSensor()
+  ns.global_event_listener_push()
+  ns.listen_event_fire()
+
+if __name__ == "__main__":
+  main()
+
+"""
+r = requests.get('https://github.com/timeline.json')
+print r.text
+payload = {'some': 'data'}
+print json.dumps(payload)
+print payload
+"""
