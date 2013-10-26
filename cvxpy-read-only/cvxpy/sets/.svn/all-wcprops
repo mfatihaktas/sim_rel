@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/65/trunk/cvxpy/sets
+END
+geo_mean_cone.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/50/trunk/cvxpy/sets/geo_mean_cone.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/65/trunk/cvxpy/sets/__init__.py
+END
+exp_cone.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/cvxpy/sets/exp_cone.py
+END
+kl_div_epi.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/42/trunk/cvxpy/sets/kl_div_epi.py
+END
+log_norm_cdf_hypo.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/50/trunk/cvxpy/sets/log_norm_cdf_hypo.py
+END
+semidefinite_cone.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/42/trunk/cvxpy/sets/semidefinite_cone.py
+END
+power_pos_epi.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/65/trunk/cvxpy/sets/power_pos_epi.py
+END
+second_order_cone.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/50/trunk/cvxpy/sets/second_order_cone.py
+END

@@ -148,12 +148,12 @@ class ARPResponder (object):
       fm.priority = 0x1000 # Pretty high
       fm.match.dl_type = ethernet.ARP_TYPE
       fm.match.dl_dst = EthAddr("FF:FF:FF:FF:FF:FF")
-      fm.idle_timeout = 100
+      fm.idle_timeout = 0 #100
       fm.hard_timeout = 0
       fm.actions.append(of.ofp_action_output(port=of.OFPP_CONTROLLER))
       event.connection.send(fm)
       print "_install_flow is done for ", event.connection
-      self.send_stat_req(event)
+      #self.send_stat_req(event)
       
   def _handle_FlowStatsReceived (self, event):
     stats = flow_stats_to_list(event.stats)
@@ -285,23 +285,21 @@ def launch (timeout=ARP_TIMEOUT, no_flow=False, eat_packets=True,
 
   core.Interactive.variables['arp'] = _arp_table
   #Static ARP entries for avoiding ARP query in network with loops
-  _arp_table[IPAddr("10.0.0.111")] = Entry("00:00:00:01:01:01", static=True) #deneme amacli
-  
   _arp_table[IPAddr("10.0.0.1")] = Entry("00:00:00:01:00:01", static=True) #for p
   _arp_table[IPAddr("10.0.0.2")] = Entry("00:00:00:01:00:02", static=True) #for c
   
-  _arp_table[IPAddr("10.0.0.011")] = Entry("00:00:00:00:01:01", static=True) #for t11
-  _arp_table[IPAddr("10.0.0.012")] = Entry("00:00:00:00:01:02", static=True) #for t12
-  _arp_table[IPAddr("10.0.0.013")] = Entry("00:00:00:00:01:03", static=True) #for t13
-  _arp_table[IPAddr("10.0.0.021")] = Entry("00:00:00:00:02:01", static=True) #for t21
-  _arp_table[IPAddr("10.0.0.022")] = Entry("00:00:00:00:02:02", static=True) #for t22
-  _arp_table[IPAddr("10.0.0.023")] = Entry("00:00:00:00:02:03", static=True) #for t23
-  _arp_table[IPAddr("10.0.0.031")] = Entry("00:00:00:00:03:01", static=True) #for t31
-  _arp_table[IPAddr("10.0.0.032")] = Entry("00:00:00:00:03:02", static=True) #for t32
-  _arp_table[IPAddr("10.0.0.033")] = Entry("00:00:00:00:03:03", static=True) #for t33
-  _arp_table[IPAddr("10.0.0.041")] = Entry("00:00:00:00:04:01", static=True) #for t41
-  _arp_table[IPAddr("10.0.0.042")] = Entry("00:00:00:00:04:02", static=True) #for t42
-  _arp_table[IPAddr("10.0.0.043")] = Entry("00:00:00:00:04:03", static=True) #for t43
+  _arp_table[IPAddr("10.0.0.11")] = Entry("00:00:00:00:01:01", static=True) #for t11
+  _arp_table[IPAddr("10.0.0.12")] = Entry("00:00:00:00:01:02", static=True) #for t12
+  _arp_table[IPAddr("10.0.0.13")] = Entry("00:00:00:00:01:03", static=True) #for t13
+  _arp_table[IPAddr("10.0.0.21")] = Entry("00:00:00:00:02:01", static=True) #for t21
+  _arp_table[IPAddr("10.0.0.22")] = Entry("00:00:00:00:02:02", static=True) #for t22
+  _arp_table[IPAddr("10.0.0.23")] = Entry("00:00:00:00:02:03", static=True) #for t23
+  _arp_table[IPAddr("10.0.0.31")] = Entry("00:00:00:00:03:01", static=True) #for t31
+  _arp_table[IPAddr("10.0.0.32")] = Entry("00:00:00:00:03:02", static=True) #for t32
+  _arp_table[IPAddr("10.0.0.33")] = Entry("00:00:00:00:03:03", static=True) #for t33
+  _arp_table[IPAddr("10.0.0.41")] = Entry("00:00:00:00:04:01", static=True) #for t41
+  _arp_table[IPAddr("10.0.0.42")] = Entry("00:00:00:00:04:02", static=True) #for t42
+  _arp_table[IPAddr("10.0.0.43")] = Entry("00:00:00:00:04:03", static=True) #for t43
   #
   for k,v in kw.iteritems():
     _arp_table[IPAddr(k)] = Entry(v, static=True)

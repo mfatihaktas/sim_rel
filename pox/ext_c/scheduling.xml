@@ -1,35 +1,1302 @@
 <scheduling>
-  <session number="2">
-    <rank>4</rank>
-    <year>2011</year>
-    <gdppc>59900</gdppc>
-    <neighbor direction="N" name="Malaysia" />
-  </session>
-  <session number="1">
-    <connection dpid="12" from="10.0.0.21">
+  <session number="6">
+    <connection dpid="12" from="10.0.0.255">
       <type>forward</type>
-      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.21" />
-      <rule duration="50" fport="3" />
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
     </connection>
-    <connection dpid="2" from="10.0.0.21">
+    <connection dpid="4" from="10.0.0.255">
       <type>forward</type>
-      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.21" />
-      <rule duration="50" fport="4" />
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
     </connection>
-    <connection dpid="1" from="10.0.0.2">
+    <connection dpid="4" from="10.0.0.31">
       <type>modify_forward</type>
-      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" />
-      <rule duration="50" fport="4" new_dst_ip="10.0.0.11" new_dst_mac="00:00:00:00:01:01" />
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
     </connection>
     <connection dpid="11" from="10.0.0.2">
       <type>forward</type>
-      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" />
-      <rule duration="50" fport="2" />
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
     </connection>
-    <connection dpid="1" from="10.0.0.11">
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="7">
+    <connection dpid="12" from="10.0.0.255">
       <type>forward</type>
-      <wildcards dst_ip="10.0.0.21" src_ip="10.0.0.11" />
-      <rule duration="50" fport="2" />
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="8">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="9">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="10">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="11">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="12">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="13">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="14">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="15">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="16">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="17">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="18">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="19">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="20">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="21">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="22">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="23">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="24">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="5">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="4">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="1">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="2">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="3">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
+    </connection>
+  </session>
+  <session number="0">
+    <connection dpid="12" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s12-eth2" />
+    </connection>
+    <connection dpid="4" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s4-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.31">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth4" new_dst_ip="10.0.0.41" new_dst_mac="00:00:00:00:04:01" />
+    </connection>
+    <connection dpid="3" from="10.0.0.255">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.2" src_ip="10.0.0.255" />
+      <rule duration="50" fport="s3-eth1" />
+    </connection>
+    <connection dpid="4" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth2" />
+    </connection>
+    <connection dpid="3" from="10.0.0.31">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.31" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth2" />
+    </connection>
+    <connection dpid="12" from="10.0.0.42">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.42" tp_dst="6000" />
+      <rule duration="50" fport="s12-eth3" />
+    </connection>
+    <connection dpid="11" from="10.0.0.2">
+      <type>forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s11-eth3" />
+    </connection>
+    <connection dpid="4" from="10.0.0.41">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.41" tp_dst="6000" />
+      <rule duration="50" fport="s4-eth5" new_dst_ip="10.0.0.42" new_dst_mac="00:00:00:00:04:02" />
+    </connection>
+    <connection dpid="3" from="10.0.0.2">
+      <type>modify_forward</type>
+      <wildcards dst_ip="10.0.0.1" src_ip="10.0.0.2" tp_dst="6000" />
+      <rule duration="50" fport="s3-eth4" new_dst_ip="10.0.0.31" new_dst_mac="00:00:00:00:03:01" />
     </connection>
   </session>
 </scheduling>

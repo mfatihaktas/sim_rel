@@ -1,0 +1,96 @@
+from pylab import *
+import numpy.numarray as na
+
+
+head_margin = 0.3
+
+def plot_sching_result(s_info_dict):
+  global head_margin
+  width=0.4 #bar width
+  sid_len = len(s_info_dict)
+  base_info_list = ["bw", "proc", "dur", "n"]
+  bil_len = len(base_info_list)
+  x_len = bil_len*sid_len
+  #
+  [data, xlocations] = extract_plot_data(s_info_dict, base_info_list, width)
+  #print 'data: ', data
+  #print 'xlocations: ', xlocations
+  #
+  fc_set = ['#9999ff', 'green', '#ff9999', 'k', 'm', 'y', 'c']
+  count = 0
+  for base_info in base_info_list:
+    bar(xlocations[count], data[base_info], width=width, facecolor=fc_set[count], edgecolor='white')
+    for j in range(0,sid_len):
+      text(xlocations[count][j]+width/2, data[base_info][j]+0.5, \
+           '%s' % data[base_info][j], \
+           ha='center', va= 'bottom')
+    count += 1
+  #writing session id under the info bar sections
+  for i in range(0,sid_len):
+    text(head_margin+bil_len*(0.3+1*i), -6, 'S'+`i`)
+  #yticks(range(0,  8))
+  #xlocations = na.array(range(len(data)))+0.5
+  # x-axis labeling
+  xticks(arange(x_len)+head_margin+width/2, base_info_list*sid_len)
+  print 'arange(x_len)+width/2: ', arange(x_len)+width/2
+  #xticks(xlocations+ width/2, labels)
+  xlim(0, x_len+width*2)
+  title("Scheduling Decision")
+  gca().get_xaxis().tick_bottom()
+  gca().get_yaxis().tick_left()
+
+  show()
+  
+def extract_plot_data(s_info_dict, base_info_list, width):
+  global head_margin
+  #Assuming s_info_dict and base_info_list are in-sync
+  sid_len = len(s_info_dict)
+  bil_len = len(base_info_list)
+  #
+  xlocations = {}
+  for i in range(0, bil_len):
+    xlocations[i] = na.array([x*bil_len+i for x in range(0, sid_len)])+head_margin
+  #
+  data = {'bw':[], 'proc':[], 'dur':[], 'n':[]}
+  for s_id in s_info_dict:
+    for base_info in base_info_list:
+      data[base_info].append(s_info_dict[s_id][base_info])
+    
+  return [data, xlocations]
+  
+def main():
+  s_info_dict = {
+                  0:{'bw':66, 'proc':24, 'dur':4, 'n':2},
+                  1:{'bw':19, 'proc':14, 'dur':5, 'n':1},
+                  2:{'bw':54, 'proc':33, 'dur':7.8, 'n':2},
+                  3:{'bw':30, 'proc':33, 'dur':12, 'n':4},
+                  4:{'bw':65, 'proc':15, 'dur':8, 'n':3}
+                }
+  plot_sching_result(s_info_dict)
+  
+  '''
+  n = 4
+  X = np.arange(n)
+  #print 'X: ', X
+  #X_chars = ['bw', 'proc', 'dur', 'n']
+  Y1 = (1-X/float(n)) * np.random.uniform(0.5,1.0,n)
+  Y2 = (1-X/float(n)) * np.random.uniform(0.5,1.0,n)
+
+  bar(X, +Y1, facecolor='#9999ff', edgecolor='white')
+  #bar(X, -Y2, facecolor='#ff9999', edgecolor='white')
+
+  for x,y in zip(X,Y1):
+    text(x+0.4, y+0.05, '%.2f' % y, ha='center', va= 'bottom')
+
+  ylim(0,+1.25)
+  '''
+  show()
+
+
+
+
+
+
+  
+if __name__ == "__main__":
+  main()

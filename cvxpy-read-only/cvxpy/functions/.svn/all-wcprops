@@ -1,0 +1,155 @@
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/65/trunk/cvxpy/functions
+END
+lambda_max.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/42/trunk/cvxpy/functions/lambda_max.py
+END
+max.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/65/trunk/cvxpy/functions/max.py
+END
+quad_over_lin.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/42/trunk/cvxpy/functions/quad_over_lin.py
+END
+log_norm_cdf.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/42/trunk/cvxpy/functions/log_norm_cdf.py
+END
+sqrt.py
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/42/trunk/cvxpy/functions/sqrt.py
+END
+exp.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/cvxpy/functions/exp.py
+END
+norm1.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/50/trunk/cvxpy/functions/norm1.py
+END
+norm2.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/42/trunk/cvxpy/functions/norm2.py
+END
+det_rootn.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/50/trunk/cvxpy/functions/det_rootn.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/65/trunk/cvxpy/functions/__init__.py
+END
+square.py
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/42/trunk/cvxpy/functions/square.py
+END
+abs.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/cvxpy/functions/abs.py
+END
+huber.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/65/trunk/cvxpy/functions/huber.py
+END
+norm_inf.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/50/trunk/cvxpy/functions/norm_inf.py
+END
+kl_div.py
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/42/trunk/cvxpy/functions/kl_div.py
+END
+geo_mean.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/42/trunk/cvxpy/functions/geo_mean.py
+END
+power_p.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/65/trunk/cvxpy/functions/power_p.py
+END
+quad_form.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/50/trunk/cvxpy/functions/quad_form.py
+END
+power_pos.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/65/trunk/cvxpy/functions/power_pos.py
+END
+log_sum_exp.py
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/42/trunk/cvxpy/functions/log_sum_exp.py
+END
+power_abs.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/65/trunk/cvxpy/functions/power_abs.py
+END
+log.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/cvxpy/functions/log.py
+END
+min.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/65/trunk/cvxpy/functions/min.py
+END
+lambda_min.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/42/trunk/cvxpy/functions/lambda_min.py
+END
+nuclear_norm.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/42/trunk/cvxpy/functions/nuclear_norm.py
+END

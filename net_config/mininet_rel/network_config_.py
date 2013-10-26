@@ -137,12 +137,10 @@ if __name__ == '__main__':
     c.setDefaultRoute(intf='c-eth0')
     
     #arp thing
-    #p.setARP(ip='10.0.0.1', mac='00:00:00:01:00:01')
-    #p.setARP(ip='10.0.0.111', mac='00:00:00:01:01:01')
-    #c.setARP(ip='10.0.0.2', mac='00:00:00:01:00:02')
     # Enable sFlow
     #quietRun('sudo ovs-vsctl -- --id=@sflow create sFlow agent=eth1 target=192.168.56.1:6343 header=128 sampling=64 polling=10 -- -- set bridge s11 sflow=@sflow -- set bridge s1 sflow=@sflow -- set bridge s2 sflow=@sflow -- set bridge s12 sflow=@sflow')
 
     net.start()
     CLI( net )
     net.stop()
+    

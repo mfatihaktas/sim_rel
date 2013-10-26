@@ -42,8 +42,7 @@ class MyTopo( Topo ):
         s4 = self.addSwitch( 's4' )
         s11 = self.addSwitch( 's11' )
         s12 = self.addSwitch( 's12' )
-	
-	 #link opts
+	#link opts
         local_linkopts = dict(bw=10, delay='5ms', loss=0, max_queue_size=1000, use_htb=True)
         wide_linkopts = dict(bw=10, delay='50ms', loss=0, max_queue_size=1000, use_htb=True)
         dsa_linkopts = dict(bw=1000, delay='1ms', loss=0, max_queue_size=10000, use_htb=True)
@@ -82,7 +81,7 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
 
     info( '*** Creating network\n' )
-    net = Mininet( topo=MyTopo(), link=TCLink)
+    net = Mininet( topo=MyTopo(), link=TCLink, controller=RemoteController, autoStaticArp=True)
     cont=net.addController('r1', controller=RemoteController, ip='192.168.56.1',port=6633)
     cont.start()
     
@@ -115,18 +114,23 @@ if __name__ == '__main__':
     t22.setMAC(mac='00:00:00:00:02:02')
     t23.setMAC(mac='00:00:00:00:02:03')
     t31.setMAC(mac='00:00:00:00:03:01')
-    t32.setMAC(mac='00:00:00:00:03:03')
+    t32.setMAC(mac='00:00:00:00:03:02')
     t33.setMAC(mac='00:00:00:00:03:03')
     t41.setMAC(mac='00:00:00:00:04:01')
     t42.setMAC(mac='00:00:00:00:04:02')
     t43.setMAC(mac='00:00:00:00:04:03')
     #To fix "network is unreachable"
     p.setDefaultRoute(intf='p-eth0')
+    t31.setDefaultRoute(intf='t31-eth0')
+    t32.setDefaultRoute(intf='t32-eth0')
     #for now to eliminate ARP based broadcast storm
+    """
+    net.staticArp()
     p.setARP(ip='10.0.0.1', mac='00:00:00:01:00:01')
     p.setARP(ip='10.0.0.111', mac='00:00:00:01:01:01')
     c.setARP(ip='10.0.0.2', mac='00:00:00:01:00:02')
-    
+    t32.setARP(ip='10.0.0.31', mac='00:00:00:00:03:01')
+    """
     net.start()
     CLI( net )
     net.stop()

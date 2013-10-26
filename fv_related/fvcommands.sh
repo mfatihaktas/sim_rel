@@ -54,8 +54,8 @@ then
 elif [ $1 = 'af' ]
 then
 	./fvctl.py -f fvpasswd_file add-flowspace allflowspace all 1 any allslice=6 #,myslice2=0
-	./fvctl.py -f fvpasswd_file add-flowspace cnt1flowspace all 10 tp_dst=5000 cnt1slice=7 #,myslice2=0
-	./fvctl.py -f fvpasswd_file add-flowspace sch_cntflowspace all 10 tp_dst=6000 sch_cntslice=7 #,myslice2=0
+	./fvctl.py -f fvpasswd_file add-flowspace cnt1flowspace all 10 tp_dst=6000 cnt1slice=7 #,myslice2=0
+	./fvctl.py -f fvpasswd_file add-flowspace sch_cntflowspace all 10 tp_dst=7000 sch_cntslice=7 #,myslice2=0
 	#./fvctl.py -f fvpasswd_file add-flowspace arpflowspace all 3 dl_type=0x806 arpslice=7 #,myslice2=0
 else
 	echo "Argument did not match !"

@@ -1,0 +1,39 @@
+import numpy as np
+from cvxpy.defs import *
+from cvxpy.utils import *
+from cvxpy.interface import *
+from cvxpy.arrays import cvxpy_array
+from cvxpy.arrays import cvxpy_matrix
+
+# dub_step
+def dub_step(x):
+    # Prepare input
+    if (np.isscalar(x) or 
+        type(x).__name__ in SCALAR_OBJS):
+        arg = vstack([x])
+    elif (type(x) is cvxpy_matrix or
+          type(x).__name__ in ARRAY_OBJS):
+        arg = x
+    else:
+        raise TypeError('Invalid argument')
+
+    # Prepare output
+    if type(arg) is cvxpy_matrix:
+        output = zeros(arg.shape)
+    else:
+        output = cvxpy_array(arg.shape[0],arg.shape[1])
+
+    # Construct program
+    for i in range(0,arg.shape[0],1):
+        for j in range(0,arg.shape[1],1):
+            if arg.value >= 0:
+              output[i,j] = 1
+            else:
+              output[i,j] = -1
+
+    # Return output
+    if output.shape == (1,1):
+        return output[0,0]
+    else:
+        
+        return output

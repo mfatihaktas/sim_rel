@@ -1,0 +1,11 @@
+To install:
+
+sudo python setup.py install
+
+To run all tests:
+
+sudo python setup.py test
+
+To run a single test
+
+sudo python setup.py test -s tests.name_of_test

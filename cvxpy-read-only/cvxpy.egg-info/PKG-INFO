@@ -1,0 +1,13 @@
+Metadata-Version: 1.1
+Name: cvxpy
+Version: 0.1
+Summary: CVXPY
+Home-page: http://www.stanford.edu/~ttinoco
+Author: Tomas Tinoco de Rubira
+Author-email: ttinoco@stanford.edu
+License: GPL
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires: scipy
+Requires: cvxopt
+Requires: numpy

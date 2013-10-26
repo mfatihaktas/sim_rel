@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/66/trunk/cvxpy/procedures
+END
+re_eval.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/50/trunk/cvxpy/procedures/re_eval.py
+END
+solve_prog.py
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/65/trunk/cvxpy/procedures/solve_prog.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/42/trunk/cvxpy/procedures/__init__.py
+END
+expand.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/50/trunk/cvxpy/procedures/expand.py
+END
+call_solver.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/66/trunk/cvxpy/procedures/call_solver.py
+END

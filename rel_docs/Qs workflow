@@ -1,0 +1,8 @@
+1) Is there any schematic showing main workflow components and producer-consumer relations ?
+2) Present coupling types - application level data transport requirements i.e. hard 
+and soft requirement differences and how are these varying based on the coupling types ?
+3) Quantitative information about;
+  * Amount of data being trasferred between p-c's.
+  * General (Science) network and in-transit resource characteristics. Especially
+  network latency and in-transit capacity distribution and granularity.
+  * 

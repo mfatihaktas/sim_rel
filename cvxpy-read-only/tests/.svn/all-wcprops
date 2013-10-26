@@ -1,0 +1,293 @@
+K 25
+svn:wc:ra_dav:version-url
+V 28
+/svn/!svn/ver/65/trunk/tests
+END
+test_function_max.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/42/trunk/tests/test_function_max.py
+END
+test_function_log_norm_cdf.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/42/trunk/tests/test_function_log_norm_cdf.py
+END
+test_utils.py
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/62/trunk/tests/test_utils.py
+END
+test_interface.py
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/63/trunk/tests/test_interface.py
+END
+test_arrays.py
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/64/trunk/tests/test_arrays.py
+END
+test_function_exp.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/42/trunk/tests/test_function_exp.py
+END
+test_function_norm2.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/42/trunk/tests/test_function_norm2.py
+END
+test_function_det_rootn.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/42/trunk/tests/test_function_det_rootn.py
+END
+test_constraints.py
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/62/trunk/tests/test_constraints.py
+END
+test_function_abs.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/42/trunk/tests/test_function_abs.py
+END
+test_function_geo_mean.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/50/trunk/tests/test_function_geo_mean.py
+END
+test_problem1.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/tests/test_problem1.py
+END
+test_problem3.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/tests/test_problem3.py
+END
+test_problem5.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/50/trunk/tests/test_problem5.py
+END
+test_problem7.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/tests/test_problem7.py
+END
+test_function_lambda_min.py
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/42/trunk/tests/test_function_lambda_min.py
+END
+test_scalars.py
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/64/trunk/tests/test_scalars.py
+END
+test_set_geo_mean_cone.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/42/trunk/tests/test_set_geo_mean_cone.py
+END
+test_function_nuclear_norm.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/42/trunk/tests/test_function_nuclear_norm.py
+END
+test_function_lambda_max.py
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/42/trunk/tests/test_function_lambda_max.py
+END
+test_function_quad_over_lin.py
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/65/trunk/tests/test_function_quad_over_lin.py
+END
+test_problem_penalty.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/62/trunk/tests/test_problem_penalty.py
+END
+test_problem_ubsdp.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/63/trunk/tests/test_problem_ubsdp.py
+END
+test_function_sqrt.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/42/trunk/tests/test_function_sqrt.py
+END
+test_problem_robust_regression.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/62/trunk/tests/test_problem_robust_regression.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/62/trunk/tests/__init__.py
+END
+test_function_norm1.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/42/trunk/tests/test_function_norm1.py
+END
+test_problem_spls.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/64/trunk/tests/test_problem_spls.py
+END
+test_set_log_norm_cdf_hypo.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/42/trunk/tests/test_set_log_norm_cdf_hypo.py
+END
+test_function_square.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/42/trunk/tests/test_function_square.py
+END
+test_problem_expdesign.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/63/trunk/tests/test_problem_expdesign.py
+END
+robsvm.py
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/62/trunk/tests/robsvm.py
+END
+test_function_huber.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/50/trunk/tests/test_function_huber.py
+END
+test_function_norm_inf.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/42/trunk/tests/test_function_norm_inf.py
+END
+test_function_kl_div.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/42/trunk/tests/test_function_kl_div.py
+END
+ubsdp.py
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/62/trunk/tests/ubsdp.py
+END
+test_function_power_p.py
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/65/trunk/tests/test_function_power_p.py
+END
+test_set_kl_div_epi.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/65/trunk/tests/test_set_kl_div_epi.py
+END
+test_function_quad_form.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/42/trunk/tests/test_function_quad_form.py
+END
+test_problem2.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/50/trunk/tests/test_problem2.py
+END
+test_function_power_pos.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/65/trunk/tests/test_function_power_pos.py
+END
+test_problem4.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/tests/test_problem4.py
+END
+test_function_log.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/42/trunk/tests/test_function_log.py
+END
+test_function_log_sum_exp.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/42/trunk/tests/test_function_log_sum_exp.py
+END
+test_problem6.py
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/42/trunk/tests/test_problem6.py
+END
+test_function_power_abs.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/65/trunk/tests/test_function_power_abs.py
+END
+test_problem_robsvm.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/63/trunk/tests/test_problem_robsvm.py
+END
+test_function_min.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/42/trunk/tests/test_function_min.py
+END
