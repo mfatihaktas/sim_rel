@@ -1,46 +1,166 @@
 from pylab import *
 import numpy.numarray as na
+from mpl_toolkits.mplot3d import Axes3D
 
 class PerfPlotter(object):
   def __init__(self, actual_res_dict):
     self.plot_head_margin = 0.3
     self.actual_res_dict = actual_res_dict
   
+  def plot_res_sportion_alloc(self, res):
+    pass
+    
   def show_sching_result(self, s_info_dict, res_info_dict):
     figure(num=1, figsize=(8, 10))
     #
     font = {'size': 10}
     matplotlib.rc('font', **font)
     #
+    figure(num=1, figsize=(25, 10))
     subplot(311)
-    self.plot_session_allocation(s_info_dict)
+    self.plot_session_total_alloc(s_info_dict)
     subplot(312)
     self.plot_session_perfs(s_info_dict)
     subplot(313)
     self.plot_res_assignment(res_info_dict)
+    #
+    #for res_ses_portion_resource_allocation plotting
+    fig = figure(figsize=(10,10))
+    ax = fig.add_subplot(311, projection='3d')
+    #r_list = ['bw','proc','dur']
+    self.plot_speculative_session_alloc('bw', ax, g_info_dict, s_info_dict)
+    ax = fig.add_subplot(312, projection='3d')
+    self.plot_speculative_session_alloc('proc', ax, g_info_dict, s_info_dict)
+    ax = fig.add_subplot(313, projection='3d')
+    self.plot_speculative_session_alloc('dur', ax, g_info_dict, s_info_dict)
     #
     show()
   
-  def save_sching_result(self, s_info_dict, res_info_dict):
-    figure(num=1, figsize=(25, 10))
-    #
+  def save_sching_result(self, g_info_dict, s_info_dict, res_info_dict):
     font = {'size': 10}
     matplotlib.rc('font', **font)
+    #fid: file_id "by active session #'s" for saving plots
+    fid = ''
+    for s_id in s_info_dict:
+      fid += str(s_id)
     #
+    #for session_total_resource_alloc plotting
+    figure(num=1, figsize=(25, 10))
     subplot(311)
-    self.plot_session_allocation(s_info_dict)
+    self.plot_session_total_alloc(s_info_dict)
     subplot(312)
     self.plot_session_perfs(s_info_dict)
     subplot(313)
     self.plot_res_assignment(res_info_dict)
+    savefig('sching_decs/s-r_total_alloc_id:%s.png' % fid)
     #
-    #Sching dec will be save to a file with name formed by active session #'s
-    fname = ''
-    for s_id in s_info_dict:
-      fname += str(s_id)
-    savefig('sching_decs/%s.png' % fname)
+    #for speculative_session_alloc plotting
+    fig = figure(figsize=(10,10))
+    ax = fig.add_subplot(311, projection='3d')
+    #r_list = ['bw','proc','dur']
+    self.plot_speculative_session_alloc('bw', ax, g_info_dict, s_info_dict)
+    ax = fig.add_subplot(312, projection='3d')
+    self.plot_speculative_session_alloc('proc', ax, g_info_dict, s_info_dict)
+    ax = fig.add_subplot(313, projection='3d')
+    self.plot_speculative_session_alloc('dur', ax, g_info_dict, s_info_dict)
+    savefig('sching_decs/s_speculative_alloc_id:%s.png' % fid)
+    #
+    #for res_ses_portion_resource_alloc plotting
+    sid_len = len(s_info_dict)
+    ll_index = g_info_dict['ll_index']
+    fig = figure(figsize=(14,10))
+    ax = fig.add_subplot(311, projection='3d')
+    #r_list = ['bw','proc','dur']
+    self.plot_res__session_portion_alloc('bw', ax, res_info_dict, sid_len, ll_index)
+    ax = fig.add_subplot(312, projection='3d')
+    self.plot_res__session_portion_alloc('proc', ax, res_info_dict, sid_len, ll_index)
+    ax = fig.add_subplot(313, projection='3d')
+    self.plot_res__session_portion_alloc('dur', ax, res_info_dict, sid_len, ll_index)
+    savefig('sching_decs/r_session_portion_alloc_id:%s.png' % fid)
+    
+  def plot_res__session_portion_alloc(self, r, ax, res_info_dict, sid_len, ll_index):
+    width, length =0.1, 0.1 #for bars
+    rid_len = len(res_info_dict)
+    color_map = { 'bw':'#9999ff', 'proc':'#ff9999', 'dur':'green' }
+    #y: s_id, x:r_id
+    def extract_rr_plot_data(r): #r must be in 
+      xlocs, ylocs, rs_data = [], [], []
+      head, tail = None, None
+      if r == 'bw':
+        head, tail = 0, ll_index+1
+      else: #r = 'proc' or 'dur'
+        head, tail = ll_index+1, rid_len
+      #
+      for r_id in range(head,tail):
+        rs_cap = res_info_dict[r_id][r+'_palloc_list']
+        for s_id in range(0, sid_len):
+          y = s_id+1-width/2
+          x = r_id+1-length/2-(head)
+          z = float('{0:.2f}'.format(rs_cap[s_id]))
+          xlocs.append(x)
+          ylocs.append(y)
+          rs_data.append(z)
+          #displaying z values with text on top of bars
+          ax.text(x=x+width/2, y=y+length/2, z=z*1.1, s=str(z), color='b', \
+                  ha='center', va= 'bottom', fontsize=9)
+      #
+      return [head, tail, xlocs, ylocs, rs_data]
+    #
+    [head, tail, xlocs, ylocs, rs_data] = extract_rr_plot_data(r)
+    ax.bar3d(xlocs, ylocs, z=[0]*len(ylocs), dx=width, dy=length, dz=rs_data, \
+             color=color_map[r], alpha=0.4)
+    #setting tick labels
+    ytick_locs = na.array(range(sid_len))+1
+    ytick_strs = ['S'+`i` for i in range(sid_len)]
+    yticks(ytick_locs, ytick_strs)
+    
+    xtick_locs = na.array(range(tail-head))+1
+    xtick_strs = ['R'+`i` for i in range(head, tail)]
+    xticks(xtick_locs, xtick_strs)
+    #
+    ax.set_zlabel(r)
+    title("r_%s" % r)
+    
+    
+  def plot_speculative_session_alloc(self, r, ax, g_info_dict, s_info_dict):
+    width, length =0.1, 0.1 #for bars
+    sid_len = len(s_info_dict)
+    max_numspaths = g_info_dict['max_numspaths']
+    color_map = { 'bw':'#9999ff', 'proc':'#ff9999', 'dur':'green' }
+    #
+    def extract_pr_plot_data(r): #r must be in 
+      xlocs, ylocs, pr_data = [], [], []
+      for s_id in range(0,sid_len):
+        s_pr = s_info_dict[s_id]['p_'+r]
+        for p_id in range(0, max_numspaths):
+          x = p_id+1-width/2
+          y = s_id+1-length/2
+          z = float('{0:.2f}'.format(s_pr[p_id]))
+          xlocs.append(x)
+          ylocs.append(y)
+          pr_data.append(z)
+          #displaying z values with text on top of bars
+          ax.text(x=x+width/2, y=y+length/2, z=z*1.1, s=str(z), color='b', \
+                  ha='center', va= 'bottom', fontsize=9)
+          #
+      return [xlocs, ylocs, pr_data]
+    #
+    [xlocs, ylocs, pr_data] = extract_pr_plot_data(r)
+    ax.bar3d(xlocs, ylocs, z=[0]*len(ylocs), dx=width, dy=length, dz=pr_data, \
+             color=color_map[r], alpha=0.4)
+    #setting tick labels
+    xtick_locs = na.array(range(max_numspaths))+1
+    xtick_strs = ['P'+`i` for i in range(max_numspaths)]
+    xticks(xtick_locs, xtick_strs)
+    ytick_locs = na.array(range(sid_len))+1
+    ytick_strs = ['S'+`i` for i in range(sid_len)]
+    yticks(ytick_locs, ytick_strs)
+    #
+    ax.set_zlabel(r)
+    title("r_%s" % r)
+    #show()
   
-  def plot_session_allocation(self, s_info_dict):
+  def plot_session_total_alloc(self, s_info_dict):
     width=0.4 #bar width
     sid_len = len(s_info_dict)
     base_info_list = ["bw", "proc", "dur", "n", "stor"]

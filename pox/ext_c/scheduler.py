@@ -166,12 +166,13 @@ class Scheduler(object):
     then corresponding rules to correspoding actuator (which is a single controller 
     right now !)
     '''
-    session_res_alloc_dict = self.allocate_resources()
+    alloc_dict = self.allocate_resources()
     print '---------------SCHING STARTED---------------'
-    print 'session_res_alloc_dict:'
-    pprint.pprint(session_res_alloc_dict)
-    self.perf_plotter.save_sching_result(session_res_alloc_dict['s-wise'], 
-                                         session_res_alloc_dict['res-wise'])
+    print 'alloc_dict:'
+    pprint.pprint(alloc_dict)
+    self.perf_plotter.save_sching_result(alloc_dict['general'],
+                                         alloc_dict['s-wise'], 
+                                         alloc_dict['res-wise'])
     #Convert sching decs to rules
     def walkbundle_to_walk(shortest_path, walkbundle):
       walk = shortest_path
@@ -187,7 +188,7 @@ class Scheduler(object):
     """
     for s_id in self.sessions_being_served_dict:
       shortest_path = self.sessionid_resources_dict[s_id]['shortest_path']
-      walk_bundle = session_res_alloc_dict['s-wise'][s_id]['walk_bundle']
+      walk_bundle = alloc_dict['s-wise'][s_id]['walk_bundle']
       walk = walkbundle_to_walk(shortest_path, walk_bundle)
       print "session_%d_walk: %s" %(s_id, walk)
       '''
@@ -239,20 +240,21 @@ class Scheduler(object):
     for s_id in self.sessions_being_served_dict:
       p_c_gw_list = self.sessions_being_served_dict[s_id]['p_c_gw_list']
       s_all_paths = self.gm.give_all_paths(p_c_gw_list[0], p_c_gw_list[1])
-      for p in s_all_paths:
+      for i,p in enumerate(s_all_paths):
         p_net_edge_list = self.gm.pathlist_to_netedgelist(p)
         p_itres_list = self.gm.give_itreslist_on_path(p)
         if not (s_id in self.sessionid_resources_dict):
-          self.sessionid_resources_dict[s_id] = {'s_info':{}, 'ps_info':[]}
-        self.sessionid_resources_dict[s_id]['ps_info'].append(
-          {'path': p,
-           'net_edge_list': p_net_edge_list,
-           'itres_list': p_itres_list
-          })
+          self.sessionid_resources_dict[s_id] = {'s_info':{}, 'ps_info':{}}
+        self.sessionid_resources_dict[s_id]['ps_info'].update(
+          {i: {'path': p,
+              'net_edge_list': p_net_edge_list,
+              'itres_list': p_itres_list
+              }}
+        )
       
   def allocate_resources(self):
     '''
-    returns (session_res_alloc_dict, session_walk_bundles_dict)
+    returns (alloc_dict, session_walk_bundles_dict)
     '''
     self.update_sessionid_resources_dict()
     sching_opter = SchingOptimizer(self.sessions_being_served_dict,
@@ -441,9 +443,7 @@ class Scheduler(object):
     self.gm.graph_add_edges(node_edge_lst['edge_lst'])
     
   def test(self):
-    # 0: Tight
-    # 1: Dataflow
-    num_session = 3
+    num_session = 4
     '''
     sr1:
       {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']}
@@ -454,16 +454,16 @@ class Scheduler(object):
     {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
     {'data_amount':0.1, 'slack_metric':4, 'func_list':['f1']},
     '''
-    req_dict_list = [ {'data_amount':1, 'slack_metric':15, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
+    req_dict_list = [ {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':1},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
                     ]
     """
     app_pref_dict_list = [
@@ -481,9 +481,9 @@ class Scheduler(object):
     {'m_p': 1,'m_u': 10,'x_p': 0.02,'x_u': 0.02},
     """
     app_pref_dict_list = [
-                          {'m_p': 10,'m_u': 0.1,'x_p': 0,'x_u': 0},
+                          {'m_p': 10,'m_u': 1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
-                          {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
+                          {'m_p': 1,'m_u': 0.5,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
@@ -502,13 +502,133 @@ class Scheduler(object):
       self.welcome_session(i, p_c_ip_list_list[0], p_c_gw_list_list[0],
                            req_dict_list[i], app_pref_dict_list[i] )
     """
-    (session_res_alloc_dict, session_walk_bundles_dict) = self.allocate_resources()
-    print 'session_res_alloc_dict:'
-    pprint.pprint(session_res_alloc_dict)
-    print 'session_walk_bundles_dict:'
-    pprint.pprint(session_walk_bundles_dict)
-    self.perf_plotter.save_sching_result(session_res_alloc_dict['s-wise'], 
-                                         session_res_alloc_dict['res-wise'])
+    #DENEME
+    g_info_dict = {'max_numspaths':2, 'll_index':4}
+    #for p_r__alloc plotting
+    s_info_dict = {
+      0: {
+          'p_bw': [24.84343386893252, -2.4547204946537794e-21],
+          'p_dur': [4.0098990234282693e-08, 1.4525739583368101e-22],
+          'p_proc': [294.37116687292303, -2.9347854917429113e-19],
+         },
+      1: {
+          'p_bw': [24.84343386893252, -2.4547204946537794e-21],
+          'p_dur': [4.0098990234282693e-08, 1.4525739583368101e-22],
+          'p_proc': [294.37116687292303, -2.9347854917429113e-19],
+         },
+      2: {
+          'p_bw': [24.84343386893252, -2.4547204946537794e-21],
+          'p_dur': [4.0098990234282693e-08, 1.4525739583368101e-22],
+          'p_proc': [294.37116687292303, -2.9347854917429113e-19],
+         },
+      3: {
+          'p_bw': [24.84343386893252, -2.4547204946537794e-21],
+          'p_dur': [4.0098990234282693e-08, 1.4525739583368101e-22],
+          'p_proc': [294.37116687292303, -2.9347854917429113e-19],
+         }
+    }
+    #self.perf_plotter.save_sching_result(g_info_dict, s_info_dict, None)
+    #for res session portion alloc plotting
+    res_info_dict = {
+      0: {'bw': 56.546990163154547,
+          'bw_palloc_list': [24.843370569526662,
+                             10.304778192360112,
+                             11.094062391141305,
+                             10.304778192188895]},
+      1: {'bw': 56.546990163154547,
+          'bw_palloc_list': [24.843370569526662,
+                             10.304778192360112,
+                             11.094062391141305,
+                             10.304778192188895]},
+      2: {'bw': 99.999999991730704,
+          'bw_palloc_list': [24.843370569526662,
+                             24.28381900217388,
+                             26.588991417878624,
+                             24.283819002151606]},
+      3: {'bw': 43.453009828576164,
+          'bw_palloc_list': [-9.366893991447322e-34,
+                             13.979040809813766,
+                             15.49492902673732,
+                             13.979040809962711]},
+      4: {'bw': 99.999999991730704,
+          'bw_palloc_list': [24.843370569526662,
+                             24.28381900217388,
+                             26.588991417878624,
+                             24.283819002151606]},
+      5: {'dur_palloc_list': [6.6527897977695746e-09,
+                              6.964034371911032e-09,
+                              5.79412850313757e-09,
+                              6.9640344165499515e-09],
+          'proc_palloc_list': [98.12618834860451,
+                               0.6234061671802416,
+                               0.626998865206443,
+                               0.6234061672075883]},
+      6: {'dur_palloc_list': [3.6687930228967406e-18,
+                              3.4733829064567034e-09,
+                              2.8884192155580274e-09,
+                              3.4733828703764218e-09],
+          'proc_palloc_list': [4.399418514918891e-18,
+                               23.82312662679616,
+                               52.35374651644713,
+                               23.823126627002626]},
+      7: {'dur_palloc_list': [2.778359340740923e-19,
+                              3.4733829098222416e-09,
+                              2.8884189600808926e-09,
+                              3.4733830026069085e-09],
+          'proc_palloc_list': [-8.929869324033728e-19,
+                               23.823126626799475,
+                               52.353746516737765,
+                               23.823126626708657]},
+      8: {'dur_palloc_list': [1.0959833174366283e-18,
+                              3.4733829212014637e-09,
+                              2.888419251834689e-09,
+                              3.4733826370267986e-09],
+          'proc_palloc_list': [1.7540003622870305e-18,
+                               23.823126626883827,
+                               52.35374651672901,
+                               23.82312662663306]},
+      9: {'dur_palloc_list': [8.057118791661958e-18,
+                              3.4733827853772818e-09,
+                              2.8884182561784826e-09,
+                              3.4733824276965557e-09],
+          'proc_palloc_list': [1.6662375988161964e-18,
+                               23.823126626845692,
+                               52.353746516580635,
+                               23.823126626819597]},
+      10: {'dur_palloc_list': [-3.349129480374196e-18,
+                               3.4733834313550116e-09,
+                               2.888419330870589e-09,
+                               3.473382717244568e-09],
+           'proc_palloc_list': [6.316048746285588e-18,
+                                23.82312662682369,
+                                52.353746516473905,
+                                23.82312662694829]},
+      11: {'dur_palloc_list': [-1.1104957900058857e-17,
+                               3.4733821624979717e-09,
+                               2.8884190713851053e-09,
+                               3.473383294430109e-09],
+           'proc_palloc_list': [6.764673292784063e-19,
+                                23.823126626821423,
+                                52.35374651663706,
+                                23.823126626787413]},
+      12: {'dur_palloc_list': [6.652789742217586e-09,
+                               6.9640347738148275e-09,
+                               5.794128105937587e-09,
+                               6.964035192969033e-09],
+           'proc_palloc_list': [98.12618834860756,
+                                0.6234061671786015,
+                                0.6269988652061944,
+                                0.6234061672064036]},
+      13: {'dur_palloc_list': [6.652789806352765e-09,
+                               6.9640342062035945e-09,
+                               5.794128685031484e-09,
+                               6.964034151689216e-09],
+           'proc_palloc_list': [98.12618834863456,
+                                0.6234061671794716,
+                                0.6269988651799244,
+                                0.6234061672048473]}
+    }
+    self.perf_plotter.save_sching_result(g_info_dict, s_info_dict, res_info_dict)
     """
     self.do_sching()
     #self.print_scher_state()

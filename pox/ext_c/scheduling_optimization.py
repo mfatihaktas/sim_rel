@@ -73,6 +73,7 @@ class SchingOptimizer:
       self.a__p_bwprocdur_map()
       #to check min storage requirement for staging
       self.r_stor = variable(self.num_itr,1,name='r_stor')
+      self.r_stor__r_durXs_bw_map()
       #to find out actual stor used by <bw_vector, dur_vector>
       #will be filled up in grab_sching
       self.r_stor_actual = [0]*self.num_itr #list index: res_id
@@ -82,10 +83,37 @@ class SchingOptimizer:
       #
       self.print_optimizer()
       #To keep SCHING DECISION in a dict
-      self.session_res_alloc_dict = {'s-wise': {}, 'res-wise': {}}
+      self.session_res_alloc_dict = {'general':{},'s-wise': {}, 'res-wise': {}}
       self.session_walk_bundles_dict = {}
     
     ################### For Enabling Speculation ###############################
+    def r_stor__r_durXs_bw_map(self):
+      #
+      def norm2_square(v):
+        vs = v.shape
+        #print 'vs: ', vs
+        if vs[1] != 1:
+          print 'vector shape is not suitable for norm_square'
+          sys.exit()
+        #if the vector is scalar
+        if vs[1] == 1:
+          return square(v)
+        #
+        r_ = parameter(vs[0],1, attribute='nonnegative')
+        for i in range(0,vs[0]):
+          r_[i,0] = square(v[i,0])
+        
+        return sum(r_)
+      #
+      # itr_storage requirement modeling for self.r_storstaging
+      for i in range(0, self.num_itr):
+        dur_vector = self.r_dur[:, i] #Nx1
+        bw_vector = (self.a[0, :]).T #Nx1
+        self.r_stor[i, 0] = \
+        (0.001/2)*( norm2_square(bw_vector)+norm2_square(dur_vector) )
+        #(0.001/2)*( square(norm2(bw_vector))+square(norm2(dur_vector)) )
+        #(0.001/2)*( power_pos(norm2(bw_vector), 2)+power_pos(norm2(dur_vector), 2) )
+    
     def get_max_numspaths(self):
       #finds and returns maximum # of paths between sessions 
       max_ = 0
@@ -124,16 +152,16 @@ class SchingOptimizer:
       par_dur = parameter(self.N,self.max_numspaths, name = 'par_')
       par_dur.value = zeros((self.N,self.max_numspaths))
       for s_id in self.sessionid_resources_dict:
-        ps_info_list = self.sessionid_resources_dict[s_id]['ps_info']
-        for i in range(0, len(ps_info_list)):
-          for itr_id in ps_info_list[i]['p_itrid_list']:
+        ps_info_dict = self.sessionid_resources_dict[s_id]['ps_info']
+        for p_id, p_info_dict in ps_info_dict.items():
+          for itr_id in p_info_dict['p_itrid_list']:
             itr_id_ = itr_id - self.ll_index - 1 
-            if par_proc[s_id,i].value == 0 and par_dur[s_id,i].value == 0: #not touched yet
-              par_proc[s_id,i] = self.r_proc[s_id,itr_id_]
-              par_dur[s_id,i] = self.r_dur[s_id,itr_id_]
+            if par_proc[s_id,p_id].value == 0 and par_dur[s_id,p_id].value == 0: #not touched yet
+              par_proc[s_id,p_id] = self.r_proc[s_id,itr_id_]
+              par_dur[s_id,p_id] = self.r_dur[s_id,itr_id_]
             else:
-              par_proc[s_id,i] += self.r_proc[s_id,itr_id_]
-              par_dur[s_id,i] += self.r_dur[s_id,itr_id_]
+              par_proc[s_id,p_id] += self.r_proc[s_id,itr_id_]
+              par_dur[s_id,p_id] += self.r_dur[s_id,itr_id_]
       #
       self.p_proc = par_proc
       self.p_dur = par_dur
@@ -141,19 +169,64 @@ class SchingOptimizer:
       #print "self.p_dur: \n", self.p_dur
      
     def p_bwprocdur_sparsity_constraint(self):
+      def my_min(x,y):
+        min_ = x
+        if (min_ > y):
+          min_ = y
+        return min_
       '''
       Not all the sessions have equal number of available transfer paths.
       This constraint will indicate this sparsity of p_bw, p_proc, p_dur.
       '''
       pbw_const_, pproc_const_, pdur_const_ = None, None, None
+      s_sparsity_dict = {}
+      total_sparsity = 0
       for s_id in self.sessionid_resources_dict:
         numspaths = len(self.sessionid_resources_dict[s_id]['ps_info'])
-        pbw_const_ = self.p_bw[s_id,numspaths:(self.max_numspaths-1)]
-        pproc_const_ = self.p_proc[s_id,numspaths:(self.max_numspaths-1)]
-        pdur_const_ = self.p_dur[s_id,numspaths:(self.max_numspaths-1)]
-      return eq(pbw_const_, 0) + \
-             eq(pproc_const_, 0) + \
-             eq(pdur_const_, 0)
+        parism_level = self.sessions_being_served_dict[s_id]['req_dict']['parism_level']
+        num_ssparsity = self.max_numspaths-my_min(numspaths, parism_level)
+        s_sparsity_dict[s_id] = num_ssparsity
+        total_sparsity += num_ssparsity
+      #print "s_sparsity_dict: ", s_sparsity_dict
+      if total_sparsity == 0:
+        #Workaround to avoid: 'NoneType' CONSTRAINT has no attribute 'is_dcp'
+        dummy_par_ = parameter(0,0, name="par_for_proc" )
+        return eq(dummy_par_, 0)
+      elif total_sparsity == 1: #only one session has one sparsity in p_bw
+        for s_id in range(0,self.N):
+          num_sparsity = s_sparsity_dict[s_id]
+          if num_sparsity == 0:
+            continue
+          pi = self.max_numspaths-num_sparsity
+          dummy_par = parameter(3,1, name="dummy_par")
+          dummy_par[0,0] = self.p_bw[s_id,pi]
+          dummy_par[1,0] = self.p_proc[s_id,pi]
+          dummy_par[2,0] = self.p_dur[s_id,pi]
+          #
+          return eq(dummy_par, 0)
+      else:
+        par_for_bw = parameter(total_sparsity,1, name="par_for_bw" )
+        par_for_proc = parameter(total_sparsity,1, name="par_for_proc" )
+        par_for_dur = parameter(total_sparsity,1, name="par_for_dur" )
+        ti = 0
+        for s_id in range(0,self.N):
+          num_sparsity = s_sparsity_dict[s_id]
+          if num_sparsity == 0:
+            continue
+          pi = self.max_numspaths-num_sparsity
+          """
+          print "s%i" % s_id
+          print "ti: ", ti
+          print "pi: ", pi
+          """
+          for i in range(0, num_sparsity):
+            par_for_bw[ti+i,0] = self.p_bw[s_id,pi+i]
+            par_for_proc[ti+i,0] = self.p_proc[s_id,pi+i]
+            par_for_dur[ti+i,0] = self.p_dur[s_id,pi+i]
+          ti += num_sparsity
+        return eq(par_for_bw, 0) + \
+               eq(par_for_proc, 0) + \
+               eq(par_for_dur, 0)
     
     def r_bwprocdur_sparsity_constraint(self):
       s_r_id_notindomain_list = []
@@ -247,6 +320,7 @@ class SchingOptimizer:
               leq(self.r_stor, r_stor_cap_column)
     
     def grab_sching_result(self):
+      ###########################   S-WISE   #################################
       self.get_session_itwalk_bundles()
       #
       from math import floor
@@ -317,7 +391,6 @@ class SchingOptimizer:
                                              'soft_pi': n #(n/s_n_max)*100
                                             }
       else:
-        print '>>>>>>>>>> N: ', self.N
         for i in range(0, self.N):
           s_slack = self.sessions_being_served_dict[i]['req_dict']['slack_metric']
           #s_n_max = len(self.sessions_being_served_dict[i]['req_dict']['func_list'])
@@ -341,13 +414,13 @@ class SchingOptimizer:
           tt = self.tt[i,0].value
           walk_bundle = None #self.session_walk_bundles_dict[i]
           #Adding p_bwprocdur info
-          s_ps_info = self.sessionid_resources_dict[0]['ps_info']
+          s_ps_info = self.sessionid_resources_dict[i]['ps_info']
           num_ps = len(s_ps_info)
           p_bw, p_proc, p_dur = [0]*num_ps, [0]*num_ps, [0]*num_ps
           for k in range(0,num_ps):
-            p_bw[k] = self.p_bw[0,k].value
-            p_proc[k] = self.p_proc[0,k].value
-            p_dur[k] = self.p_dur[0,k].value
+            p_bw[k] = self.p_bw[i,k].value
+            p_proc[k] = self.p_proc[i,k].value
+            p_dur[k] = self.p_dur[i,k].value
           #
           self.session_res_alloc_dict['s-wise'][i] = {
                                                'p_bw':p_bw, 'p_proc':p_proc, 'p_dur':p_dur,
@@ -365,13 +438,19 @@ class SchingOptimizer:
                                                'f_Dp_map': f_Dp_map,
                                                'soft_pi': n #(n/s_n_max)*100
                                               }
-      #
+      ###########################   RES-WISE   #################################
       r_bw_in_column = ((self.r_bw).T)*ones((self.N,1))
       r_proc_in_column = ((self.r_proc).T)*ones((self.N,1))
-      # for network links
+      #FOR network links
       for i in range(0, self.num_link):
+        #link_cap total usage
         self.session_res_alloc_dict['res-wise'][i] = {'bw': r_bw_in_column[i,0].value}
+        #link_cap-session portion alloc
+        self.session_res_alloc_dict['res-wise'][i].update(
+        {'bw_palloc_list': [float(e) for e in self.r_bw[:,i].value] }
+        )
       
+      #FOR it-resources
       def dot(v1, v2):
         #print 'v1: ', v1
         #print 'v2: ', v2
@@ -379,24 +458,50 @@ class SchingOptimizer:
           return v1 * v2
         else:
           return np.dot(v1.T, v2)
-      
+      #
       for i in range(0, self.num_itr):
         #calculation of actual storage space
         dur_vector = (self.r_dur[:, i]).value #Nx1
         bw_vector = ((self.a[0, :]).T).value #Nx1
         self.r_stor_actual[i] = dot(dur_vector, bw_vector)*0.001
-        #
+        #res_cap total usage
+        #dump trick to work-around Cvxpy's not being able to turn SOMEthings to Python scalar
+        stor_model_val = [float(e) for e in self.r_stor[i,0].value][0]
         self.session_res_alloc_dict['res-wise'][i+self.num_link] = {
           'proc': r_proc_in_column[i,0].value,
-          'stor_model': self.r_stor[i,0].value,
-          'stor_actual': self.r_stor_actual[i]
+          'stor_model': stor_model_val,
+          'stor_actual': float(self.r_stor_actual[i])
         }
+        #res_cap-session portion alloc
+        self.session_res_alloc_dict['res-wise'][i+self.num_link].update(
+        {
+          'proc_palloc_list': [float(e) for e in self.r_proc[:,i].value],
+          'dur_palloc_list': [float(e) for e in self.r_dur[:,i].value]
+        })
+      #
+      
+      #general info about sching_decision
+      self.session_res_alloc_dict['general']['max_numspaths'] = self.max_numspaths
+      self.session_res_alloc_dict['general']['ll_index'] = self.ll_index
+      
+      ############################
+      #for report, printouts !
+      ''''
+      print '|||||||||||||||||||||||||||||||||||||||||'
+      print 'a:\n', self.a.value
+      print 'p_bw:\n', self.p_bw.value
+      print 'p_proc:\n', self.p_proc.value
+      print 'r_bw:\n', self.r_bw.value
+      print 'r_proc:\n', self.r_proc.value
+      print 'r_dur:\n', self.r_dur.value
+      print '|||||||||||||||||||||||||||||||||||||||||'
+      '''
         
     def solve(self):
       #self.resource_assign_model()
       (self.scal_var).value = 1
       #
-      """
+      '''
       print '------------------------------'
       print 'F0(): ', self.F0()
       print 'F0().is_convex():', self.F0().is_convex()
@@ -405,22 +510,22 @@ class SchingOptimizer:
       print 'F(a): ', self.F(self.a)
       print 'F(a).is_convex():', self.F(self.a).is_convex()
       print '------------------------------'
-      """
-      """
+      '''
+      
       print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
       #print 'constraint0: \n', self.constraint0()
       #print 'self.tt_epigraph_form_constraint(): \n', self.tt_epigraph_form_constraint()
       #print 'res_cap_constraint: \n', self.res_cap_constraint()
-      #print 'p_bwprocdur_sparsity_constraint:', self.p_bwprocdur_sparsity_constraint()
-      #print 'r_bwprocdur_sparsity_constraint:', self.r_bwprocdur_sparsity_constraint()
+      print 'p_bwprocdur_sparsity_constraint:', self.p_bwprocdur_sparsity_constraint()
+      print 'r_bwprocdur_sparsity_constraint:', self.r_bwprocdur_sparsity_constraint()
       print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-      """
+      
       p = program(minimize(self.F(self.a)),
                   ([self.constraint0(),
                     self.tt_epigraph_form_constraint(),
                     self.res_cap_constraint(),
-                    self.p_bwprocdur_sparsity_constraint(),
-                    self.r_bwprocdur_sparsity_constraint()
+                    self.r_bwprocdur_sparsity_constraint(),
+                    self.p_bwprocdur_sparsity_constraint()
                    ]
                   ),
                   options = {
@@ -431,14 +536,14 @@ class SchingOptimizer:
                     #'refinement':0
                   }
                  )
-      """
+      '''
       print ">>>>>>>>>>>>>>>>>>>>>>>>>>"
       #p.show()
       print 'p.variables:\n', p.variables
       print 'p.parameters:\n', p.parameters
       print 'p.constraints:\n', p.constraints
       print ">>>>>>>>>>>>>>>>>>>>>>>>>>"
-      """
+      '''
       #
       #print '(p.objective).is_convex(): ', (p.objective).is_convex()
       #print '(p.constraints).is_dcp(): ', (p.constraints).is_dcp()
@@ -657,7 +762,7 @@ class SchingOptimizer:
       net_edge = namedtuple("net_edge", ["pre", "post"])
       for s_id in self.sessionid_resources_dict:
         s_linkid_list = []
-        for p_info_dict in self.sessionid_resources_dict[s_id]['ps_info']:
+        for p_id, p_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
           p_linkid_list = []
           for ne_tuple in p_info_dict['net_edge_list']:
             ne = net_edge(pre=ne_tuple[0] ,post=ne_tuple[1])
@@ -671,7 +776,7 @@ class SchingOptimizer:
     def add_sessionpathitrs_with_ids(self):
       for s_id in self.sessionid_resources_dict:
         s_itrid_list = []
-        for p_info_dict in self.sessionid_resources_dict[s_id]['ps_info']:
+        for pid, p_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
           p_itrid_list = []
           for itr in p_info_dict['itres_list']:
             itr_id = self.actual_res_dict['res_id_map'][itr]
@@ -690,7 +795,7 @@ class SchingOptimizer:
           link_counter = 0
           #Every session is counted as num_available_paths user for the resource
           for s_id in self.sessionid_resources_dict:
-            for path_info_dict in self.sessionid_resources_dict[s_id]['ps_info']:
+            for p_id, path_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
               if link_tuple in path_info_dict['net_edge_list']:
                 link_counter += 1
           
@@ -717,9 +822,10 @@ class SchingOptimizer:
       #the bw, fair_bw of each session can be set to accordingly
       for s_id in self.sessionid_resources_dict:
         s_fair_bw = 0
-        for path_info_dict in self.sessionid_resources_dict[s_id]['ps_info']:
+        for p_id, path_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
           p_fair_bw = give_fair_bw_share(path_info_dict['net_edge_list'])
           path_info_dict.update({'fair_bw': p_fair_bw})
           s_fair_bw += p_fair_bw
         
         self.sessionid_resources_dict[s_id]['s_info'].update({'fair_bw':s_fair_bw})
+  
