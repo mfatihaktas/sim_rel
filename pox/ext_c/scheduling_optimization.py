@@ -11,12 +11,12 @@ import sys
 from collections import namedtuple
 
 class SchingOptimizer:
-    def __init__(self, sessions_being_served_dict, actual_res_dict,
+    def __init__(self, sessions_beingserved_dict, actual_res_dict,
                  sessionid_resources_dict):
-      self.sessions_being_served_dict = sessions_being_served_dict
+      self.sessions_beingserved_dict = sessions_beingserved_dict
       self.actual_res_dict = actual_res_dict
       self.sessionid_resources_dict = sessionid_resources_dict
-      self.N = len(sessions_being_served_dict) # num of active transport sessions
+      self.N = len(sessions_beingserved_dict) # num of active transport sessions
       self.k = len(actual_res_dict['id_info_map']) # num of actual resources
       #
       self.ll_index = self.actual_res_dict['overview']['last_link_index']
@@ -42,7 +42,7 @@ class SchingOptimizer:
         2:{'p':1, 'u':1}
       }
       #
-      self.add_workload_info()
+      self.add_proccomp__update_parism_info()
       self.add_sessionpathlinks_with_ids()
       self.add_sessionpathitrs_with_ids()
       # scalarization factor
@@ -50,11 +50,11 @@ class SchingOptimizer:
       # optimization variable vector: tt_epigraph_form_tracer
       self.tt = variable(self.N,1, name='tt')
       # SESSION ALLOC MATRIX
-      """
+      '''
       a[:,i]: [bw_i (Mbps); proc_i (Mflop/s); dur_i (ms); n_i]
       By assuming in-transit host NIC bws are ALWAYS higher than allocated bw:
       stor (Mb) = dur (ms)/1000 x bw (Mbps)
-      """
+      '''
       self.a = variable(4,self.N, name='a')
       self.n_grain = 100
       #RESOURCE ALLOC for each diff path of sessions; modeling parameter
@@ -67,9 +67,21 @@ class SchingOptimizer:
       #RESOURCE ALLOC for each session; modeling parameter
       self.r_bw = variable(self.N,self.num_link,name='r_bw')
       self.r_bw__p_bw_map()
-      self.r_proc = variable(self.N,self.num_itr,name='r_proc')
-      self.r_dur = variable(self.N,self.num_itr,name='r_dur')
+      self.r_proc2 = variable(self.N,self.num_itr,name='r_proc2')
+      self.r_dur2 = variable(self.N,self.num_itr,name='r_dur2')
+      '''
+      Problem:
+      Intersection of s_path_itres sets become is a bug for speculation
+      - Especially critical when s_parism_level < num_spaths
+      Solution:
+      Encode 3-dim matrix (s_id-p_id-r_id) by repeating 2-dim matrix r_* (s_id-r_id)
+      redundantly as max_parismlevel times.
+      '''
+      self.max_parismlevel = self.get_max_parismlevel()
+      self.r_proc = variable(self.N*self.max_parismlevel,self.num_itr,name='r_proc')
+      self.r_dur = variable(self.N*self.max_parismlevel,self.num_itr,name='r_dur')
       self.p_procdur__r_procdur_map()
+      self.r_proc2dur2__r_procdur_map()
       self.a__p_bwprocdur_map()
       #to check min storage requirement for staging
       self.r_stor = variable(self.num_itr,1,name='r_stor')
@@ -84,7 +96,7 @@ class SchingOptimizer:
       self.print_optimizer()
       #To keep SCHING DECISION in a dict
       self.session_res_alloc_dict = {'general':{},'s-wise': {}, 'res-wise': {}}
-      self.session_walk_bundles_dict = {}
+      self.session_path__itwalkbundles_dict = {}
     
     ################### For Enabling Speculation ###############################
     def r_stor__r_durXs_bw_map(self):
@@ -107,15 +119,45 @@ class SchingOptimizer:
       #
       # itr_storage requirement modeling for self.r_storstaging
       for i in range(0, self.num_itr):
-        dur_vector = self.r_dur[:, i] #Nx1
+        dur_vector = self.r_dur2[:, i] #Nx1
         bw_vector = (self.a[0, :]).T #Nx1
         self.r_stor[i, 0] = \
         (0.001/2)*( norm2_square(bw_vector)+norm2_square(dur_vector) )
         #(0.001/2)*( square(norm2(bw_vector))+square(norm2(dur_vector)) )
         #(0.001/2)*( power_pos(norm2(bw_vector), 2)+power_pos(norm2(dur_vector), 2) )
+      #print 'r_stor: ', self.r_stor
+      
+    def r_proc2dur2__r_procdur_map(self):
+      par_proc2 = parameter(self.N,self.num_itr, name = 'par_proc2')
+      par_proc2.value = zeros((self.N,self.num_itr))
+      par_dur2 = parameter(self.N,self.num_itr, name = 'par_dur2')
+      par_dur2.value = zeros((self.N,self.num_itr))
+      for r_id in range(0, self.num_itr):
+        for s_id in range(0, self.N):
+          for pl in range(0, self.max_parismlevel):
+            s_id_ = s_id + pl*self.N
+            if par_proc2[s_id,r_id].value == 0 and par_dur2[s_id,r_id].value == 0: #not touched yet
+              par_proc2[s_id,r_id] = self.r_proc[s_id_,r_id]
+              par_dur2[s_id,r_id] = self.r_dur[s_id_,r_id]
+            else:
+              par_proc2[s_id,r_id] += self.r_proc[s_id_,r_id]
+              par_dur2[s_id,r_id] += self.r_dur[s_id_,r_id]
+      self.r_proc2 = par_proc2
+      self.r_dur2 = par_dur2
+      #print 'r_proc2:\n', self.r_proc2
+      #print 'r_dur2:\n', self.r_dur2
+    
+    def get_max_parismlevel(self):
+      #finds and returns maximum level of parism among sessions
+      max_ = 0
+      for s_id in self.sessions_beingserved_dict:
+        pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        if pl > max_:
+          max_ = pl
+      return max_
     
     def get_max_numspaths(self):
-      #finds and returns maximum # of paths between sessions 
+      #finds and returns maximum # of paths between sessions
       max_ = 0
       for s_id in self.sessionid_resources_dict:
         numspaths = len(self.sessionid_resources_dict[s_id]['ps_info'])
@@ -129,7 +171,7 @@ class SchingOptimizer:
         self.a[0,i] = sum(self.p_bw[i,:])
         self.a[1,i] = sum(self.p_proc[i,:])
         self.a[2,i] = sum(self.p_dur[i,:])
-      #print "a:\n", self.a
+      #print "a[2,:]:\n", self.a[2,:]
 
     def r_bw__p_bw_map(self):
       par_ = parameter(self.N,self.num_link, name = 'par_')
@@ -147,21 +189,22 @@ class SchingOptimizer:
       #print "self.r_bw: \n", self.r_bw
     
     def p_procdur__r_procdur_map(self):
-      par_proc = parameter(self.N,self.max_numspaths, name = 'par_')
+      par_proc = parameter(self.N,self.max_numspaths, name = 'par_proc')
       par_proc.value = zeros((self.N,self.max_numspaths))
-      par_dur = parameter(self.N,self.max_numspaths, name = 'par_')
+      par_dur = parameter(self.N,self.max_numspaths, name = 'par_dur')
       par_dur.value = zeros((self.N,self.max_numspaths))
       for s_id in self.sessionid_resources_dict:
         ps_info_dict = self.sessionid_resources_dict[s_id]['ps_info']
         for p_id, p_info_dict in ps_info_dict.items():
           for itr_id in p_info_dict['p_itrid_list']:
-            itr_id_ = itr_id - self.ll_index - 1 
+            itr_id_ = itr_id - self.ll_index - 1
+            s_id_ = s_id+p_id*self.N 
             if par_proc[s_id,p_id].value == 0 and par_dur[s_id,p_id].value == 0: #not touched yet
-              par_proc[s_id,p_id] = self.r_proc[s_id,itr_id_]
-              par_dur[s_id,p_id] = self.r_dur[s_id,itr_id_]
+              par_proc[s_id,p_id] = self.r_proc[s_id_,itr_id_]
+              par_dur[s_id,p_id] = self.r_dur[s_id_,itr_id_]
             else:
-              par_proc[s_id,p_id] += self.r_proc[s_id,itr_id_]
-              par_dur[s_id,p_id] += self.r_dur[s_id,itr_id_]
+              par_proc[s_id,p_id] += self.r_proc[s_id_,itr_id_]
+              par_dur[s_id,p_id] += self.r_dur[s_id_,itr_id_]
       #
       self.p_proc = par_proc
       self.p_dur = par_dur
@@ -169,11 +212,6 @@ class SchingOptimizer:
       #print "self.p_dur: \n", self.p_dur
      
     def p_bwprocdur_sparsity_constraint(self):
-      def my_min(x,y):
-        min_ = x
-        if (min_ > y):
-          min_ = y
-        return min_
       '''
       Not all the sessions have equal number of available transfer paths.
       This constraint will indicate this sparsity of p_bw, p_proc, p_dur.
@@ -183,8 +221,8 @@ class SchingOptimizer:
       total_sparsity = 0
       for s_id in self.sessionid_resources_dict:
         numspaths = len(self.sessionid_resources_dict[s_id]['ps_info'])
-        parism_level = self.sessions_being_served_dict[s_id]['req_dict']['parism_level']
-        num_ssparsity = self.max_numspaths-my_min(numspaths, parism_level)
+        parism_level = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        num_ssparsity = self.max_numspaths-parism_level
         s_sparsity_dict[s_id] = num_ssparsity
         total_sparsity += num_ssparsity
       #print "s_sparsity_dict: ", s_sparsity_dict
@@ -214,11 +252,11 @@ class SchingOptimizer:
           if num_sparsity == 0:
             continue
           pi = self.max_numspaths-num_sparsity
-          """
+          '''
           print "s%i" % s_id
           print "ti: ", ti
           print "pi: ", pi
-          """
+          '''
           for i in range(0, num_sparsity):
             par_for_bw[ti+i,0] = self.p_bw[s_id,pi+i]
             par_for_proc[ti+i,0] = self.p_proc[s_id,pi+i]
@@ -229,30 +267,32 @@ class SchingOptimizer:
                eq(par_for_dur, 0)
     
     def r_bwprocdur_sparsity_constraint(self):
-      s_r_id_notindomain_list = []
+      s_rid_notindomain_list = []
       for s_id in self.sessionid_resources_dict:
-        s_info_map = self.sessionid_resources_dict[s_id]['s_info']
+        ps_info_dict = self.sessionid_resources_dict[s_id]['ps_info']
         '''
-        #r_bw sparsity is already ensured by par_: zeros matrix
+        #r_bw sparsity is already ensured by par_: zeros matrix (in r_bw__p_bw_map())
         for rbw_id in range(0, self.num_link):
           if not (rbw_id in s_info_map['s_linkid_list']):
             const_bw.append(eq(self.r_bw[s_id, rbw_id], 0))
         '''
         #
-        for itr_id in range(0, self.num_itr):
-          itr_id_ = itr_id + self.ll_index + 1
-          if not (itr_id_ in s_info_map['s_itrid_list']):
-            s_r_id_notindomain_list.append((s_id, itr_id))
+        for p_id, p_info_dict in ps_info_dict.items():
+          for itr_id in range(0, self.num_itr):
+            itr_id_ = itr_id + self.ll_index + 1
+            if not (itr_id_ in p_info_dict['p_itrid_list']):
+              s_rid_notindomain_list.append((s_id, p_id, itr_id))
       #
-      num_ = len(s_r_id_notindomain_list)
+      num_ = len(s_rid_notindomain_list)
       par_for_proc = parameter(num_,1, name="par_for_proc" )
       par_for_dur = parameter(num_,1, name="par_for_dur" )
-      for i,tup in enumerate(s_r_id_notindomain_list):
-        par_for_proc[i,0] = self.r_proc[tup[0], tup[1]]
-        par_for_dur[i,0] = self.r_dur[tup[0], tup[1]]
+      for i,tup in enumerate(s_rid_notindomain_list):
+        s_id_ = tup[0]+tup[1]*self.N
+        par_for_proc[i,0] = self.r_proc[s_id_, tup[2]]
+        par_for_dur[i,0] = self.r_dur[s_id_, tup[2]]
       #
       return  eq(par_for_proc, 0) + \
-              eq(par_for_proc, 0)
+              eq(par_for_dur, 0)
     
     ###################          OOO             ###############################
     # Constraint modeling functions
@@ -271,9 +311,9 @@ class SchingOptimizer:
     def constraint0(self):
       '''
       session_func_list_length_vector = zeros((1,self.N))
-      for s_id in self.sessions_being_served_dict:
+      for s_id in self.sessions_beingserved_dict:
         session_func_list_length_vector[0,s_id] = (self.n_grain**-1) * \
-        len(self.sessions_being_served_dict[s_id]['req_dict']['func_list'])
+        len(self.sessions_beingserved_dict[s_id]['req_dict']['func_list'])
       '''
       #TODO: Experiment with bw & proc lower bound to see if dur will take action in sching.
       #a[0,:] >= bw_lb + a[1,:] >= proc_lb + a[2:3,:] >= 0
@@ -288,7 +328,7 @@ class SchingOptimizer:
              [leq(self.a[3,:], 1)] + \
              [geq(self.tt, 0)] # + \
              
-      '''       
+      '''
              geq(self.a[0,:], bw_lb) + \
              geq(self.a[1,:], proc_lb) + \
              geq(self.a[2:3,:], 0) + \
@@ -307,7 +347,7 @@ class SchingOptimizer:
       for i in range(0, self.num_link):
         r_bw_cap_column[i,0] = res_id_info_map[i]['bw_cap']
       # for resource proc and stor
-      r_proc_agged_column = ((self.r_proc).T)*ones((self.N,1))
+      r_proc_agged_column = ((self.r_proc2).T)*ones((self.N,1))
       r_proc_cap_column = zeros((self.num_itr, 1))
       r_stor_cap_column = zeros((self.num_itr, 1))
       for i in range(0, self.num_itr):
@@ -330,7 +370,7 @@ class SchingOptimizer:
         the allocated 'n'.
         """
         dict_ = {}
-        fl = self.sessions_being_served_dict[s_id]['req_dict']['func_list']
+        fl = self.sessions_beingserved_dict[s_id]['req_dict']['func_list']
         num_func = len(fl)
         m = float(num_func*n)
         for func in fl:
@@ -344,14 +384,14 @@ class SchingOptimizer:
         return dict_
       #
       if self.N == 1:
-        s_slack = self.sessions_being_served_dict[0]['req_dict']['slack_metric']
-        #s_n_max = len(self.sessions_being_served_dict[0]['req_dict']['func_list'])
-        s_data_amount = self.sessions_being_served_dict[0]['req_dict']['data_amount']
-        s_proc_comp = self.sessions_being_served_dict[0]['req_dict']['proc_comp']
-        s_m_u = self.sessions_being_served_dict[0]['app_pref_dict']['m_u']
-        s_m_p = self.sessions_being_served_dict[0]['app_pref_dict']['m_p']
-        s_x_u = self.sessions_being_served_dict[0]['app_pref_dict']['x_u']
-        s_x_p = self.sessions_being_served_dict[0]['app_pref_dict']['x_p']
+        s_slack = self.sessions_beingserved_dict[0]['req_dict']['slack_metric']
+        #s_n_max = len(self.sessions_beingserved_dict[0]['req_dict']['func_list'])
+        s_data_amount = self.sessions_beingserved_dict[0]['req_dict']['data_amount']
+        s_proc_comp = self.sessions_beingserved_dict[0]['req_dict']['proc_comp']
+        s_m_u = self.sessions_beingserved_dict[0]['app_pref_dict']['m_u']
+        s_m_p = self.sessions_beingserved_dict[0]['app_pref_dict']['m_p']
+        s_x_u = self.sessions_beingserved_dict[0]['app_pref_dict']['x_u']
+        s_x_p = self.sessions_beingserved_dict[0]['app_pref_dict']['x_p']
         (bw, proc, dur, n) = (self.a[0,0].value,
                               self.a[1,0].value,
                               self.a[2,0].value,
@@ -364,7 +404,7 @@ class SchingOptimizer:
         trans_time = tx_t + proc_t + dur
         #
         tt = self.tt.value
-        walk_bundle = None #self.session_walk_bundles_dict[0]
+        itwalk_bundle = self.session_path__itwalkbundles_dict[0]
         #Adding p_bwprocdur info
         s_ps_info = self.sessionid_resources_dict[0]['ps_info']
         num_ps = len(s_ps_info)
@@ -386,20 +426,20 @@ class SchingOptimizer:
                                              'x_u': s_x_u,
                                              'x_p': s_x_p,
                                              'hard_pi': abs(s_slack-tt),
-                                             'walk_bundle': walk_bundle,
+                                             'itwalk_bundle': itwalk_bundle,
                                              'f_Dp_map': f_Dp_map,
                                              'soft_pi': n #(n/s_n_max)*100
                                             }
       else:
         for i in range(0, self.N):
-          s_slack = self.sessions_being_served_dict[i]['req_dict']['slack_metric']
-          #s_n_max = len(self.sessions_being_served_dict[i]['req_dict']['func_list'])
-          s_data_amount = self.sessions_being_served_dict[i]['req_dict']['data_amount']
-          s_proc_comp = self.sessions_being_served_dict[i]['req_dict']['proc_comp']
-          s_m_u = self.sessions_being_served_dict[i]['app_pref_dict']['m_u']
-          s_m_p = self.sessions_being_served_dict[i]['app_pref_dict']['m_p']
-          s_x_u = self.sessions_being_served_dict[i]['app_pref_dict']['x_u']
-          s_x_p = self.sessions_being_served_dict[i]['app_pref_dict']['x_p']
+          s_slack = self.sessions_beingserved_dict[i]['req_dict']['slack_metric']
+          #s_n_max = len(self.sessions_beingserved_dict[i]['req_dict']['func_list'])
+          s_data_amount = self.sessions_beingserved_dict[i]['req_dict']['data_amount']
+          s_proc_comp = self.sessions_beingserved_dict[i]['req_dict']['proc_comp']
+          s_m_u = self.sessions_beingserved_dict[i]['app_pref_dict']['m_u']
+          s_m_p = self.sessions_beingserved_dict[i]['app_pref_dict']['m_p']
+          s_x_u = self.sessions_beingserved_dict[i]['app_pref_dict']['x_u']
+          s_x_p = self.sessions_beingserved_dict[i]['app_pref_dict']['x_p']
           (bw, proc, dur, n) = (self.a[0,i].value,
                                 self.a[1,i].value,
                                 self.a[2,i].value,
@@ -412,7 +452,7 @@ class SchingOptimizer:
           trans_time = tx_t + proc_t + dur
           #
           tt = self.tt[i,0].value
-          walk_bundle = None #self.session_walk_bundles_dict[i]
+          itwalk_bundle = self.session_path__itwalkbundles_dict[i]
           #Adding p_bwprocdur info
           s_ps_info = self.sessionid_resources_dict[i]['ps_info']
           num_ps = len(s_ps_info)
@@ -434,20 +474,20 @@ class SchingOptimizer:
                                                'x_u': s_x_u,
                                                'x_p': s_x_p,
                                                'hard_pi': abs(s_slack-tt),
-                                               'walk_bundle': walk_bundle,
+                                               'itwalk_bundle': itwalk_bundle,
                                                'f_Dp_map': f_Dp_map,
                                                'soft_pi': n #(n/s_n_max)*100
                                               }
       ###########################   RES-WISE   #################################
       r_bw_in_column = ((self.r_bw).T)*ones((self.N,1))
-      r_proc_in_column = ((self.r_proc).T)*ones((self.N,1))
+      r_proc_in_column = ((self.r_proc2).T)*ones((self.N,1))
       #FOR network links
       for i in range(0, self.num_link):
         #link_cap total usage
         self.session_res_alloc_dict['res-wise'][i] = {'bw': r_bw_in_column[i,0].value}
         #link_cap-session portion alloc
         self.session_res_alloc_dict['res-wise'][i].update(
-        {'bw_palloc_list': [float(e) for e in self.r_bw[:,i].value] }
+          {'bw_palloc_list': [float(e) for e in self.r_bw[:,i].value] }
         )
       
       #FOR it-resources
@@ -461,7 +501,7 @@ class SchingOptimizer:
       #
       for i in range(0, self.num_itr):
         #calculation of actual storage space
-        dur_vector = (self.r_dur[:, i]).value #Nx1
+        dur_vector = (self.r_dur2[:, i]).value #Nx1
         bw_vector = ((self.a[0, :]).T).value #Nx1
         self.r_stor_actual[i] = dot(dur_vector, bw_vector)*0.001
         #res_cap total usage
@@ -475,8 +515,8 @@ class SchingOptimizer:
         #res_cap-session portion alloc
         self.session_res_alloc_dict['res-wise'][i+self.num_link].update(
         {
-          'proc_palloc_list': [float(e) for e in self.r_proc[:,i].value],
-          'dur_palloc_list': [float(e) for e in self.r_dur[:,i].value]
+          'proc_palloc_list': [float(e) for e in self.r_proc2[:,i].value],
+          'dur_palloc_list': [float(e) for e in self.r_dur2[:,i].value]
         })
       #
       
@@ -484,19 +524,6 @@ class SchingOptimizer:
       self.session_res_alloc_dict['general']['max_numspaths'] = self.max_numspaths
       self.session_res_alloc_dict['general']['ll_index'] = self.ll_index
       
-      ############################
-      #for report, printouts !
-      ''''
-      print '|||||||||||||||||||||||||||||||||||||||||'
-      print 'a:\n', self.a.value
-      print 'p_bw:\n', self.p_bw.value
-      print 'p_proc:\n', self.p_proc.value
-      print 'r_bw:\n', self.r_bw.value
-      print 'r_proc:\n', self.r_proc.value
-      print 'r_dur:\n', self.r_dur.value
-      print '|||||||||||||||||||||||||||||||||||||||||'
-      '''
-        
     def solve(self):
       #self.resource_assign_model()
       (self.scal_var).value = 1
@@ -516,8 +543,8 @@ class SchingOptimizer:
       #print 'constraint0: \n', self.constraint0()
       #print 'self.tt_epigraph_form_constraint(): \n', self.tt_epigraph_form_constraint()
       #print 'res_cap_constraint: \n', self.res_cap_constraint()
-      print 'p_bwprocdur_sparsity_constraint:', self.p_bwprocdur_sparsity_constraint()
-      print 'r_bwprocdur_sparsity_constraint:', self.r_bwprocdur_sparsity_constraint()
+      print 'p_bwprocdur_sparsity_constraint:\n', self.p_bwprocdur_sparsity_constraint()
+      print 'r_bwprocdur_sparsity_constraint:\n', self.r_bwprocdur_sparsity_constraint()
       print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
       
       p = program(minimize(self.F(self.a)),
@@ -557,28 +584,32 @@ class SchingOptimizer:
       '''
       p.solve()
       '''
+      print '||||||||||||||||||||||||||||||||||||'
       print 'optimal point: '
-      print 'a: \n', self.a.value
-      print 'tt: \n', self.tt.value
-      print 'r_bw: \n', self.r_bw.value
-      print 'r_proc: \n', self.r_proc.value
-      print 'r_dur: \n', self.r_dur.value
-      print 'r_stor: \n', self.r_stor.value
+      print 'a:\n', self.a.value
+      print 'p_bw:\n', self.p_bw.value
+      print 'p_proc:\n', self.p_proc.value
+      print 'p_dur:\n', self.p_dur.value
+      #print 'r_bw:\n', self.r_bw.value
+      print 'r_proc:\n', self.r_proc.value
+      print 'r_dur:\n', self.r_dur.value
+      print 'r_proc2:\n', self.r_proc2.value
+      print 'r_dur2:\n', self.r_dur2.value
       #
       print 'optimal value:'
       print 'F0(a).value: ', self.F0().value
       print 'F1(a).value: ', self.F1(self.a).value
       print 'F(a).value: ', self.F(self.a).value
-      #
+      print '||||||||||||||||||||||||||||||||||||'
       '''
       self.grab_sching_result()
      
     # modeling functions
     def R_hard(self, session_num, scol_a):
       # for now assume func_com for ever func is 1
-      data_amount = self.sessions_being_served_dict[session_num]['req_dict']['data_amount']
-      proc_comp = self.sessions_being_served_dict[session_num]['req_dict']['proc_comp']
-      slack_time = self.sessions_being_served_dict[session_num]['req_dict']['slack_metric']
+      data_amount = self.sessions_beingserved_dict[session_num]['req_dict']['data_amount']
+      proc_comp = self.sessions_beingserved_dict[session_num]['req_dict']['proc_comp']
+      slack_time = self.sessions_beingserved_dict[session_num]['req_dict']['slack_metric']
       # path_latency
       tx_time =  data_amount*1000*quad_over_lin(1, scol_a[0,:]) # in (ms)
       '''
@@ -596,8 +627,8 @@ class SchingOptimizer:
 
     def R_soft(self, session_num, scol_a):
       n = scol_a[3,:]
-      func_list = self.sessions_being_served_dict[session_num]['req_dict']['func_list']
-      data_amount = self.sessions_being_served_dict[session_num]['req_dict']['data_amount']
+      func_list = self.sessions_beingserved_dict[session_num]['req_dict']['func_list']
+      data_amount = self.sessions_beingserved_dict[session_num]['req_dict']['data_amount']
       return n*self.n_grain #*(len(func_list)**-1) #pow(len(func_list),-1)#*data_amount
 
     # modeling penalty and utility functions
@@ -617,16 +648,16 @@ class SchingOptimizer:
     """
     def P(self, session_num, expr_):
       #return self.s_pref_dict[session_num]['p']
-      m_p = self.sessions_being_served_dict[session_num]['app_pref_dict']['m_p']
-      x_p = self.sessions_being_served_dict[session_num]['app_pref_dict']['x_p']
+      m_p = self.sessions_beingserved_dict[session_num]['app_pref_dict']['m_p']
+      x_p = self.sessions_beingserved_dict[session_num]['app_pref_dict']['x_p']
       return max( vstack(( m_p*(expr_-x_p),0 )) )
       #return m_p*(expr_-x_p)
       #return self.s_pref_dict[session_num]['p']*expr_
       
     def U(self, session_num, expr_):
       #return self.s_pref_dict[session_num]['u']
-      m_u = self.sessions_being_served_dict[session_num]['app_pref_dict']['m_u']
-      x_u = self.sessions_being_served_dict[session_num]['app_pref_dict']['x_u']
+      m_u = self.sessions_beingserved_dict[session_num]['app_pref_dict']['m_u']
+      x_u = self.sessions_beingserved_dict[session_num]['app_pref_dict']['x_u']
       #return max( vstack(( m_u*(expr_-x_u),0 )) )
       #return min( vstack(( -1*m_u*(expr_-x_u),0 )) )
       return m_u*(expr_-x_u)
@@ -636,13 +667,13 @@ class SchingOptimizer:
     def F0(self):
       if self.N == 1:
         s_slack_time = \
-        self.sessions_being_served_dict[0]['req_dict']['slack_metric']
+        self.sessions_beingserved_dict[0]['req_dict']['slack_metric']
         return self.P(0, square(self.tt-s_slack_time))
       else:
         t_func = parameter(self.N,1, name = 't_func')
         for s_num in range(0,self.N):
           s_slack_time = \
-          self.sessions_being_served_dict[s_num]['req_dict']['slack_metric']
+          self.sessions_beingserved_dict[s_num]['req_dict']['slack_metric']
           t_func[s_num,0] = self.P(s_num, square(self.tt[s_num,0]-s_slack_time))
         
         return max(t_func)
@@ -663,8 +694,8 @@ class SchingOptimizer:
     # print info about optimization session
     def print_optimizer(self):
       print 'Optimizer is created with the follows: '
-      print 'sessions_being_served_dict: '
-      pprint.pprint(self.sessions_being_served_dict)
+      print 'sessions_beingserved_dict: '
+      pprint.pprint(self.sessions_beingserved_dict)
       print 'actual_res_dict: '
       pprint.pprint(self.actual_res_dict)
       print 'sessionid_resources_dict: '
@@ -711,18 +742,31 @@ class SchingOptimizer:
       they (links on given session_transfer_path) are already supposed to be in 
       the bundle.
       '''
-      for i in range(0, self.N):
-        it_bundle = []
-        for j in range(0, self.num_itr):
-          it_id = self.ll_index + j + 1
-          it_proc = self.r_proc[i,j].value
-          it_dur = self.r_dur[i,j].value
-          if it_proc > 0 or it_dur > 0:
-            it_tag = self.actual_res_dict['id_info_map'][it_id]['tag']
-            if not(i in self.session_walk_bundles_dict):
-              self.session_walk_bundles_dict[i] = {}
-            self.session_walk_bundles_dict[i][it_tag] = {'proc': it_proc, 'dur': it_dur }
-    
+      for s_id in self.sessionid_resources_dict:
+        s_ps_info = self.sessionid_resources_dict[s_id]['ps_info']
+        self.session_path__itwalkbundles_dict[s_id] = {}
+        for p_id, p_info_dict in s_ps_info.items():
+          self.session_path__itwalkbundles_dict[s_id][p_id] = {}
+          #sp_itbundle = []
+          for t_id in range(0, self.num_itr):
+            s_id_ = s_id + p_id*self.N
+            it_proc = float(self.r_proc[s_id_,t_id].value)
+            it_dur = float(self.r_dur[s_id_,t_id].value)
+            if it_proc > 1: #For dur 1ms is min_threshold
+              t_id_ = t_id + self.ll_index + 1
+              it_tag = self.actual_res_dict['id_info_map'][t_id_]['tag']
+              try:
+                self.session_path__itwalkbundles_dict[s_id][p_id][it_tag].update({'proc': it_proc})
+              except KeyError:
+                self.session_path__itwalkbundles_dict[s_id][p_id][it_tag] = {'proc': it_proc}
+            if it_dur > 1: #For proc 1 Mflop/s is min_threshold
+              t_id_ = t_id + self.ll_index + 1
+              it_tag = self.actual_res_dict['id_info_map'][t_id_]['tag']
+              try:
+                self.session_path__itwalkbundles_dict[s_id][p_id][it_tag].update({'dur': it_dur})
+              except KeyError:
+                self.session_path__itwalkbundles_dict[s_id][p_id][it_tag] = {'dur': it_dur}
+
     def feasibilize_schinginfo(self):
       self.add_path_sharing_info()
       #
@@ -731,32 +775,43 @@ class SchingOptimizer:
         to be feasible for the resource allocation optimization process.
       """
       for s_id in self.sessionid_resources_dict:
-        data_amount = self.sessions_being_served_dict[s_id]['req_dict']['data_amount']
+        data_amount = self.sessions_beingserved_dict[s_id]['req_dict']['data_amount']
         bw = self.sessionid_resources_dict[s_id]['s_info']['fair_bw']
         trans_t = 1000*data_amount/bw
         e = trans_t*0.1 #safety margin for feasibility purposes
         min_tt = trans_t + e
-        slack = self.sessions_being_served_dict[s_id]['req_dict']['slack_metric']
+        slack = self.sessions_beingserved_dict[s_id]['req_dict']['slack_metric']
         if slack < min_tt:
           print '### S{}\'s slack_metric is NOT FEASIBLE !'.format(s_id)
-          print '###   Changed from:{}ms to:{}ms'.format(slack, min_tt)
-          self.sessions_being_served_dict[s_id]['req_dict']['slack_metric'] = min_tt
+          print '  * Changed from:{}ms to:{}ms'.format(slack, min_tt)
+          self.sessions_beingserved_dict[s_id]['req_dict']['slack_metric'] = min_tt
     
     def get_sching_result(self):
       return self.session_res_alloc_dict
     
-    def add_workload_info(self):
+    def add_proccomp__update_parism_info(self):
       def total_func_comp(s_id):
-        fl = self.sessions_being_served_dict[s_id]['req_dict']['func_list']
+        fl = self.sessions_beingserved_dict[s_id]['req_dict']['func_list']
         c = 0
         for f in fl:
           c += self.func_comp_constant_dict[f]
         return c
       #
-      self.func_comp_constant_dict
-      for s_id in self.sessions_being_served_dict:
-        self.sessions_being_served_dict[s_id]['req_dict']['proc_comp'] \
-        = total_func_comp(s_id)
+      '''
+      def my_min(x,y):
+        min_ = x
+        if (min_ > y):
+          min_ = y
+        return min_
+      '''
+      for s_id in self.sessions_beingserved_dict:
+        self.sessions_beingserved_dict[s_id]['req_dict']['proc_comp'] = total_func_comp(s_id)
+        s_parism_level = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        numspaths = len(self.sessionid_resources_dict[s_id]['ps_info'])
+        if s_parism_level > numspaths:
+          print '### S{}; Not enough numspaths:{} to provide parism_level:{}'.format(s_id, numspaths, s_parism_level)
+          print '  * parism_level is changed to numspaths'
+          self.sessions_beingserved_dict[s_id]['req_dict']['parism_level'] = numspaths
     
     def add_sessionpathlinks_with_ids(self):
       net_edge = namedtuple("net_edge", ["pre", "post"])

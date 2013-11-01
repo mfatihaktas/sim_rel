@@ -46,14 +46,14 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     msg_type = job_res['type'].encode('ascii','ignore')
     res = job_res['response'].encode('ascii','ignore')
     print "SCHER rxed cur_thread:{}, job_res:{}".format(cur_thread.name, job_res)
-    # update sessions_being_served_dict to show sch_job is done for session with session_num
-    #print 'self.sessions_being_served_dict: '
-    #pprint.pprint(self.sessions_being_served_dict)
-    self.sessions_being_served_dict[session_id]['sch_job_done']=True
+    # update sessions_beingserved_dict to show sch_job is done for session with session_num
+    #print 'self.sessions_beingserved_dict: '
+    #pprint.pprint(self.sessions_beingserved_dict)
+    self.sessions_beingserved_dict[session_id]['sch_job_done']=True
     sch_res = {'type':'sch_response',
                'response':"yes",#right now either qos is guaranteed or not at all,
                'session_id':session_id,
-               'tp_dst':str(self.sessions_being_served_dict[session_id]['tp_dst'])
+               'tp_dst':str(self.sessions_beingserved_dict[session_id]['tp_dst'])
               }
     # !!! make sch_cont to send_sch_res
     Scheduler.event_chief.raise_event('sch_res_ready_to_be_sent',sch_res)
@@ -125,8 +125,11 @@ class Scheduler(object):
     else:
       self.xml_parser = XMLParser("ext/network_single_path.xml", str(xml_network_number))
     self.init_network_from_xml()
-    # Scher state dicts
-    self.sessions_being_served_dict = {}
+    #Useful state variables
+    self.last_sch_req_id_given = -1
+    self.last_tp_dst_given = info_dict['base_session_port']-1
+    #Scher state dicts
+    self.sessions_beingserved_dict = {}
     self.sessions_pre_served_dict = {}
     self.sessionid_resources_dict = {}
     self.actual_res_dict = self.gm.give_actual_resource_dict()
@@ -136,20 +139,29 @@ class Scheduler(object):
   def print_scher_state(self):
     print '<-------------------H--------------------->'
     print 'is_scheduler_run: ', is_scheduler_run
-    print 'sessions_being_served_dict:'
-    pprint.pprint(self.sessions_being_served_dict)
+    print 'sessions_beingserved_dict:'
+    pprint.pprint(self.sessions_beingserved_dict)
     print 'sessions_pre_served_dict:'
     pprint.pprint(self.sessions_pre_served_dict)
     print '<-------------------E--------------------->'
-    
-  def welcome_session(self, sch_req_id, p_c_ip_list, p_c_gw_list, req_dict, app_pref_dict):
+  
+  def next_sch_req_id(self):
+    self.last_sch_req_id_given += 1
+    return  self.last_sch_req_id_given
+  
+  def next_tp_dst(self):
+    self.last_tp_dst_given += 1
+    return  self.last_tp_dst_given
+  
+  def welcome_session(self, p_c_ip_list, p_c_gw_list, req_dict, app_pref_dict):
     """
     sch_req_id: should be unique for every sch_session
     """
     #update global list and dicts
-    session_tp_dst = info_dict['base_session_port'] #len(self.sessions_being_served_dict) + info_dict['base_session_port']
-    self.sessions_being_served_dict.update(
-      {sch_req_id:{'tp_dst':session_tp_dst,
+    s_tp_dst_list = [self.next_tp_dst() for i in range(0,req_dict['parism_level'])]
+    sch_req_id = self.next_sch_req_id()
+    self.sessions_beingserved_dict.update(
+      {sch_req_id:{'tp_dst_list':s_tp_dst_list,
                    'req_dict':req_dict,
                    'p_c_ip_list':p_c_ip_list,
                    'p_c_gw_list':p_c_gw_list,
@@ -157,8 +169,8 @@ class Scheduler(object):
                    'sch_job_done':False }
       }
     )
-    #print 'self.sessions_being_served_dict: '
-    #pprint.pprint(self.sessions_being_served_dict)
+    #print 'self.sessions_beingserved_dict: '
+    #pprint.pprint(self.sessions_beingserved_dict)
   
   def do_sching(self):
     '''
@@ -167,16 +179,16 @@ class Scheduler(object):
     right now !)
     '''
     alloc_dict = self.allocate_resources()
-    print '---------------SCHING STARTED---------------'
+    print '---------------SCHING Started ---------------'
     print 'alloc_dict:'
     pprint.pprint(alloc_dict)
     self.perf_plotter.save_sching_result(alloc_dict['general'],
                                          alloc_dict['s-wise'], 
                                          alloc_dict['res-wise'])
     #Convert sching decs to rules
-    def walkbundle_to_walk(shortest_path, walkbundle):
-      walk = shortest_path
-      for itr in walkbundle: #walkbundle is assumed to consist only itrs (currently - may change)
+    def walkbundle_to_walk(network_path, itwalkbundle):
+      walk = network_path
+      for itr in itwalkbundle: #itwalkbundle is assumed to consist of only itrs (currently - may change)
         itr_id = self.actual_res_dict['res_id_map'][itr]
         conn_sw = self.actual_res_dict['id_info_map'][itr_id]['conn_sw']
         #
@@ -185,31 +197,38 @@ class Scheduler(object):
         walk.insert(lasti_conn_sw+2, conn_sw)
       return walk
     #
+    for s_id in self.sessions_beingserved_dict:
+      s_itwalkbundle_dict = alloc_dict['s-wise'][s_id]['itwalk_bundle']
+      sp_walk_list = []
+      for p_id,p_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
+        network_path = p_info_dict['path']
+        p_itwalkbundle = s_itwalkbundle_dict[p_id]
+        walk = walkbundle_to_walk(network_path, p_itwalkbundle)
+        #print "S%d_p%d_walk: %s" %(s_id, p_id, walk)
+        sp_walk_list.append(walk)
+        #Dispatching rule to actuator_controller
+        s_info_dict = self.sessions_beingserved_dict[s_id]
+        sp_walk__tpr_rule = self.form_swalktprrule_from_swalk(
+          s_info_dict['tp_dst_list'][p_id],
+          s_info_dict['p_c_ip_list'],
+          walk,
+          s_info_dict['req_dict']
+        )
+      #update alloc_dict to put enough info for sching realization
+      alloc_dict['s-wise'][s_id].update({'p_walk_list':sp_walk_list})
+
+    print '---------------SCHING End---------------'
     """
-    for s_id in self.sessions_being_served_dict:
-      shortest_path = self.sessionid_resources_dict[s_id]['shortest_path']
-      walk_bundle = alloc_dict['s-wise'][s_id]['walk_bundle']
-      walk = walkbundle_to_walk(shortest_path, walk_bundle)
-      print "session_%d_walk: %s" %(s_id, walk)
+    for s_id in self.sessions_beingserved_dict:
       '''
-      session_walk_and_tpr_rule = self.form_walkandtpr_rule_from_walk(
-        self.sessions_being_served_dict[sch_req_id]['tp_dst'],
+      session_walk_and_tpr_rule = self.form_swalktprrule_from_swalk(
+        self.sessions_beingserved_dict[sch_req_id]['tp_dst'],
         p_c_ip_list,
         sch_path_dict['path'],
         req_dict
       )
       '''
       '''
-      self.sessions_being_served_dict.update(
-        {sch_req_id:{'tp_dst':session_tp_dst,
-                     'req_dict':req_dict,
-                     'p_c_ip_list':p_c_ip_list,
-                     'p_c_gw_list':p_c_gw_list,
-                     'app_pref_dict': app_pref_dict,
-                     'sch_job_done':False }
-        }
-        
-      
       path_rule = path_and_tpr_rule['path_rule']
       tpr_rule = path_and_tpr_rule['tpr_rule']
       Scheduler.event_chief.raise_event('tpr_rule_ready_to_be_sent',tpr_rule)
@@ -220,7 +239,7 @@ class Scheduler(object):
       #print 'xml_path_rule: \n', (xml.dom.minidom.parseString(xml_path_rule)).toprettyxml()
       #Right now sching decs for all sessions will be driven by one controller.
       #TODO: In the future, if seen necessary total work needs to be distributed
-      #over multiple controllers (may be geography-aware, power-aware ... way)
+      #over multiple controllers (may be geography-aware, power-aware, ...)
       client(info_dict['cont1_listening_from_ip'],
              info_dict['cont1_listening_from_port'], xml_path_rule)
       '''
@@ -228,8 +247,8 @@ class Scheduler(object):
   def bye_session(self, sch_req_id):
     # Send sessions whose "sching job" is done is sent to pre_served category
     self.sessions_pre_served_dict.update(
-    {sch_req_id: self.sessions_being_served_dict[sch_req_id]})
-    del self.sessions_being_served_dict[sch_req_id]
+    {sch_req_id: self.sessions_beingserved_dict[sch_req_id]})
+    del self.sessions_beingserved_dict[sch_req_id]
     
   def update_sessionid_resources_dict(self):
     """
@@ -237,8 +256,8 @@ class Scheduler(object):
     It resources need to lie on the session_shortest path.
     """
     #TODO: sessions whose resources are already specified no need for putting them in the loop
-    for s_id in self.sessions_being_served_dict:
-      p_c_gw_list = self.sessions_being_served_dict[s_id]['p_c_gw_list']
+    for s_id in self.sessions_beingserved_dict:
+      p_c_gw_list = self.sessions_beingserved_dict[s_id]['p_c_gw_list']
       s_all_paths = self.gm.give_all_paths(p_c_gw_list[0], p_c_gw_list[1])
       for i,p in enumerate(s_all_paths):
         p_net_edge_list = self.gm.pathlist_to_netedgelist(p)
@@ -257,7 +276,7 @@ class Scheduler(object):
     returns (alloc_dict, session_walk_bundles_dict)
     '''
     self.update_sessionid_resources_dict()
-    sching_opter = SchingOptimizer(self.sessions_being_served_dict,
+    sching_opter = SchingOptimizer(self.sessions_beingserved_dict,
                                    self.actual_res_dict,
                                    self.sessionid_resources_dict
                                   )
@@ -273,7 +292,7 @@ class Scheduler(object):
       #send NACK to p !!!
       return
     #
-    path_and_tpr_rule = self.form_walkandtpr_rule_from_walk(session_tp_dst,
+    path_and_tpr_rule = self.form_swalktprrule_from_swalk(s_tp_dst,
                                                       p_c_ip_list, 
                                                       sch_path_dict['path'],
                                                       req_dict)
@@ -302,16 +321,16 @@ class Scheduler(object):
       print "tpr_sw is not SW !!!"
       raise KeyError('Wrong tpr_sw')
   """
-  def form_walkandtpr_rule_from_walk(self,session_tp_dst,p_c_ip_list,path,f_Dp_map):
+  def form_swalktprrule_from_swalk(self,s_tp_dst,p_c_ip_list,walk,f_Dp_map):
     tpr_rule_dict = {}
     tpr_rule_counter = 0
     #
-    path_rule = []
+    walk_rule = []
     cur_from_ip = p_c_ip_list[0]
     cur_to_ip = p_c_ip_list[1]
     duration = 50
     cur_node_str = None
-    for i,node_str in list(enumerate(path)):#node = next_hop
+    for i,node_str in list(enumerate(walk)):#node = next_hop
       if i == 0: 
         cur_node_str = node_str
         continue
@@ -323,9 +342,9 @@ class Scheduler(object):
       node = self.gm.get_node(node_str)
       edge = self.gm.get_edge(cur_node_str, node_str)
       if node['type'] == 't': #sw-t
-        path_rule.append({'conn':[cur_node['dpid'],cur_from_ip],
+        walk_rule.append({'conn':[cur_node['dpid'],cur_from_ip],
                           'typ':'modify_forward',
-                          'wc':[cur_from_ip,cur_to_ip,int(session_tp_dst)],
+                          'wc':[cur_from_ip,cur_to_ip,int(s_tp_dst)],
                           'rule':[node['ip'],node['mac'],edge['pre_dev'],duration]
                          })
         """
@@ -338,7 +357,7 @@ class Scheduler(object):
           'tpr_mac':node['mac'],
           'swdev_to_tpr':edge['pre_dev'],
           'assigned_job':req_dict['func_list'][tpr_rule_counter],
-          'session_tp': int(session_tp_dst),
+          'session_tp': int(s_tp_dst),
           'consumer_ip': cur_to_ip.toStr()
           }]
         else:
@@ -347,19 +366,19 @@ class Scheduler(object):
           'tpr_mac':node['mac'],
           'swdev_to_tpr':edge['pre_dev'],
           'assigned_job':req_dict['func_list'][tpr_rule_counter],
-          'session_tp': int(session_tp_dst),
+          'session_tp': int(s_tp_dst),
           'consumer_ip': cur_to_ip.toStr()
            })
         tpr_rule_counter = tpr_rule_counter + 1
         cur_from_ip = node['ip']
       elif node['type'] == 'sw': #sw-sw
-        path_rule.append({'conn':[cur_node['dpid'],cur_from_ip],
+        walk_rule.append({'conn':[cur_node['dpid'],cur_from_ip],
                           'typ':'forward',
-                          'wc':[cur_from_ip,cur_to_ip,int(session_tp_dst)],
+                          'wc':[cur_from_ip,cur_to_ip,int(s_tp_dst)],
                           'rule':[edge['pre_dev'], duration]
                          })
-        #for reverse path: to deliver sch_response to src
-        path_rule.append({'conn':[node['dpid'],info_dict['scher_virtual_src_ip']],
+        #for reverse walk: to deliver sch_response to src
+        walk_rule.append({'conn':[node['dpid'],info_dict['scher_virtual_src_ip']],
                           'typ':'forward',
                           'wc':[info_dict['scher_virtual_src_ip'],p_c_ip_list[0]],
                           'rule':[edge['post_dev'], duration]
@@ -368,20 +387,20 @@ class Scheduler(object):
         raise KeyError('Unknown node_type')
       cur_node_str = node_str
     #default rule to forward packet to consumer
-    path_rule.append({'conn':[12,cur_from_ip],
+    walk_rule.append({'conn':[12,cur_from_ip],
                       'typ':'forward',
-                      'wc':[cur_from_ip,cur_to_ip,int(session_tp_dst)],
+                      'wc':[cur_from_ip,cur_to_ip,int(s_tp_dst)],
                       'rule':['s12-eth3',duration]
                       })
     #default rule to forward sch_response to producer
     """
-    path_rule.append({'conn':[11,info_dict['scher_virtual_src_ip']],
+    walk_rule.append({'conn':[11,info_dict['scher_virtual_src_ip']],
                       'typ':'forward',
                       'wc':[info_dict['scher_virtual_src_ip'],p_c_ip_list[0]],
                       'rule':['s11-eth1',duration]
                       })
     """
-    return {'path_rule':path_rule, 'tpr_rule':tpr_rule_dict}
+    return {'walk_rule':walk_rule, 'tpr_rule':tpr_rule_dict}
 
   def form_xml_single_rule(self, rule):
     dpid, from_ip = rule['conn'][0], rule['conn'][1]
@@ -499,7 +518,7 @@ class Scheduler(object):
                         ['s11', 's12'],
                        ]
     for i in range(0, num_session):
-      self.welcome_session(i, p_c_ip_list_list[0], p_c_gw_list_list[0],
+      self.welcome_session(p_c_ip_list_list[0], p_c_gw_list_list[0],
                            req_dict_list[i], app_pref_dict_list[i] )
     """
     #DENEME
