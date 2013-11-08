@@ -163,7 +163,7 @@ class PerfPlotter(object):
   def plot_session_total_alloc(self, s_info_dict):
     width=0.4 #bar width
     sid_len = len(s_info_dict)
-    base_info_list = ["bw", "proc", "dur", "n", "stor"]
+    base_info_list = ["bw", "proc", "dur", "r_soft_perf", "stor"]
     bil_len = len(base_info_list)
     x_len = bil_len*sid_len
     #
@@ -173,7 +173,7 @@ class PerfPlotter(object):
       for i in range(0, bil_len):
         xlocations[i] = na.array([x*bil_len+i for x in range(0, sid_len)])+self.plot_head_margin
       #
-      data = {'bw':[], 'proc':[], 'dur':[], 'n':[], 'stor':[]}
+      data = {'bw':[], 'proc':[], 'dur':[], 'r_soft_perf':[], 'stor':[]}
       for s_id in s_info_dict:
         for base_info in base_info_list:
           data[base_info].append(s_info_dict[s_id][base_info])

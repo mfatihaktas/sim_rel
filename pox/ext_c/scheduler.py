@@ -119,19 +119,18 @@ class Scheduler(object):
       ###########################
     self.gm = GraphMan()
     if is_scheduler_run:
-      #self.xml_parser = XMLParser("network_single_path.xml", str(xml_network_number))
-      self.xml_parser = XMLParser("network_double_path.xml", str(xml_network_number))
-      #self.xml_parser = XMLParser("network_double_path_with_random_redundancy_1.xml", str(xml_network_number))
+      self.xml_parser = XMLParser("net_xmls/net_2p_stwithsingleitr.xml", str(xml_network_number))
     else:
-      self.xml_parser = XMLParser("ext/network_single_path.xml", str(xml_network_number))
+      self.xml_parser = XMLParser("ext/net_xmls/net_2p_stwithsingleitr.xml", str(xml_network_number))
     self.init_network_from_xml()
     #Useful state variables
     self.last_sch_req_id_given = -1
     self.last_tp_dst_given = info_dict['base_session_port']-1
     #Scher state dicts
+    self.N = 0 #num_activesessions
     self.sessions_beingserved_dict = {}
     self.sessions_pre_served_dict = {}
-    self.sessionid_resources_dict = {}
+    self.sid_res_dict = {}
     self.actual_res_dict = self.gm.give_actual_resource_dict()
     #for perf plotting
     self.perf_plotter = PerfPlotter(self.actual_res_dict)
@@ -157,7 +156,8 @@ class Scheduler(object):
     """
     sch_req_id: should be unique for every sch_session
     """
-    #update global list and dicts
+    #update global var, list and dicts
+    self.N += 1
     s_tp_dst_list = [self.next_tp_dst() for i in range(0,req_dict['parism_level'])]
     sch_req_id = self.next_sch_req_id()
     self.sessions_beingserved_dict.update(
@@ -186,151 +186,52 @@ class Scheduler(object):
                                          alloc_dict['s-wise'], 
                                          alloc_dict['res-wise'])
     #Convert sching decs to rules
-    def walkbundle_to_walk(network_path, itwalkbundle):
-      walk = network_path
-      for itr in itwalkbundle: #itwalkbundle is assumed to consist of only itrs (currently - may change)
-        itr_id = self.actual_res_dict['res_id_map'][itr]
-        conn_sw = self.actual_res_dict['id_info_map'][itr_id]['conn_sw']
-        #
-        lasti_conn_sw = len(walk) - walk[::-1].index(conn_sw) - 1
-        walk.insert(lasti_conn_sw+1, itr)
-        walk.insert(lasti_conn_sw+2, conn_sw)
-      return walk
-    #
-    for s_id in self.sessions_beingserved_dict:
-      s_itwalkbundle_dict = alloc_dict['s-wise'][s_id]['itwalk_bundle']
-      sp_walk_list = []
-      for p_id,p_info_dict in self.sessionid_resources_dict[s_id]['ps_info'].items():
-        network_path = p_info_dict['path']
-        p_itwalkbundle = s_itwalkbundle_dict[p_id]
-        walk = walkbundle_to_walk(network_path, p_itwalkbundle)
-        #print "S%d_p%d_walk: %s" %(s_id, p_id, walk)
-        sp_walk_list.append(walk)
+    print '+++++++++++++++++++++++++++++++++++++++++++++'
+    for s_id in range(0,self.N):
+      s_allocinfo_dict = alloc_dict['s-wise'][s_id]
+      #
+      itwalkinfo_dict = s_allocinfo_dict['itwalkinfo_dict']
+      p_walk_dict = s_allocinfo_dict['pwalk_dict']
+      for p_id in range(0,s_allocinfo_dict['parism_level']):
+        p_walk = p_walk_dict[p_id]
+        p_itwalkinfo_dict = itwalkinfo_dict[p_id]
         #Dispatching rule to actuator_controller
-        s_info_dict = self.sessions_beingserved_dict[s_id]
-        sp_walk__tpr_rule = self.form_swalktprrule_from_swalk(
-          s_info_dict['tp_dst_list'][p_id],
-          s_info_dict['p_c_ip_list'],
-          walk,
-          s_info_dict['req_dict']
-        )
-      #update alloc_dict to put enough info for sching realization
-      alloc_dict['s-wise'][s_id].update({'p_walk_list':sp_walk_list})
-
+        sp_walk__tprrule = \
+          self.get_spwalkrule__sptprrule(s_id, p_id,
+                                         p_walk = p_walk,
+                                         p_itwalkbundle_dict = p_itwalkinfo_dict['itbundle'] )
+        print 'for s_id:%i, p_id:%i;' % (s_id, p_id)
+        #print 'walkrule:'
+        #pprint.pprint(sp_walk__tprrule['walk_rule'])
+        #print 'tpr_rule:'
+        #pprint.pprint(sp_walk__tprrule['tpr_rule'])
+        #rule: from json to xml
+        xml_path_rule = self.form_xml_path_rule(s_id, sp_walk__tprrule['walk_rule'])
+        print 'xml_path_rule: \n', (xml.dom.minidom.parseString(xml_path_rule)).toprettyxml()
+        '''
+        client(info_dict['cont1_listening_from_ip'],
+               info_dict['cont1_listening_from_port'], xml_path_rule)
+        '''
+    print '+++++++++++++++++++++++++++++++++++++++++++++'
     print '---------------SCHING End---------------'
-    """
-    for s_id in self.sessions_beingserved_dict:
-      '''
-      session_walk_and_tpr_rule = self.form_swalktprrule_from_swalk(
-        self.sessions_beingserved_dict[sch_req_id]['tp_dst'],
-        p_c_ip_list,
-        sch_path_dict['path'],
-        req_dict
-      )
-      '''
-      '''
-      path_rule = path_and_tpr_rule['path_rule']
-      tpr_rule = path_and_tpr_rule['tpr_rule']
-      Scheduler.event_chief.raise_event('tpr_rule_ready_to_be_sent',tpr_rule)
-      #print 'path_rule: '
-      #pprint.pprint(path_rule)
-      #rule: from json to xml
-      xml_path_rule = self.form_xml_path_rule(sch_req_id, path_rule)
-      #print 'xml_path_rule: \n', (xml.dom.minidom.parseString(xml_path_rule)).toprettyxml()
-      #Right now sching decs for all sessions will be driven by one controller.
-      #TODO: In the future, if seen necessary total work needs to be distributed
-      #over multiple controllers (may be geography-aware, power-aware, ...)
-      client(info_dict['cont1_listening_from_ip'],
-             info_dict['cont1_listening_from_port'], xml_path_rule)
-      '''
-    """
-  def bye_session(self, sch_req_id):
-    # Send sessions whose "sching job" is done is sent to pre_served category
-    self.sessions_pre_served_dict.update(
-    {sch_req_id: self.sessions_beingserved_dict[sch_req_id]})
-    del self.sessions_beingserved_dict[sch_req_id]
-    
-  def update_sessionid_resources_dict(self):
-    """
-    Network resources will be only the ones on the session_shortest path.
-    It resources need to lie on the session_shortest path.
-    """
-    #TODO: sessions whose resources are already specified no need for putting them in the loop
-    for s_id in self.sessions_beingserved_dict:
-      p_c_gw_list = self.sessions_beingserved_dict[s_id]['p_c_gw_list']
-      s_all_paths = self.gm.give_all_paths(p_c_gw_list[0], p_c_gw_list[1])
-      for i,p in enumerate(s_all_paths):
-        p_net_edge_list = self.gm.pathlist_to_netedgelist(p)
-        p_itres_list = self.gm.give_itreslist_on_path(p)
-        if not (s_id in self.sessionid_resources_dict):
-          self.sessionid_resources_dict[s_id] = {'s_info':{}, 'ps_info':{}}
-        self.sessionid_resources_dict[s_id]['ps_info'].update(
-          {i: {'path': p,
-              'net_edge_list': p_net_edge_list,
-              'itres_list': p_itres_list
-              }}
-        )
-      
-  def allocate_resources(self):
-    '''
-    returns (alloc_dict, session_walk_bundles_dict)
-    '''
-    self.update_sessionid_resources_dict()
-    sching_opter = SchingOptimizer(self.sessions_beingserved_dict,
-                                   self.actual_res_dict,
-                                   self.sessionid_resources_dict
-                                  )
-    sching_opter.solve()
-    #
-    return sching_opter.get_sching_result()
   
-  def sch_path(self, sch_req_id, p_c_ip_list, req_dict):
-    ###################################################
-    #sch_path_dict = self.gm.sch_path(sch_req_id, req_dict)
-    ###################################################
-    if sch_path_dict == None:
-      #send NACK to p !!!
-      return
+  def get_spwalkrule__sptprrule(self,s_id,p_id,p_walk,p_itwalkbundle_dict):
+    #print '---> for s_id:%i' % s_id
+    #print 'p_itwalkbundle_dict:'
+    #pprint.pprint(p_itwalkbundle_dict)
+    #print 'p_walk: ', p_walk
+    s_info_dict =  self.sessions_beingserved_dict[s_id]
+    s_tp_dst = s_info_dict['tp_dst_list'][p_id]
+    p_c_ip_list = s_info_dict['p_c_ip_list']
     #
-    path_and_tpr_rule = self.form_swalktprrule_from_swalk(s_tp_dst,
-                                                      p_c_ip_list, 
-                                                      sch_path_dict['path'],
-                                                      req_dict)
-    path_rule = path_and_tpr_rule['path_rule']
-    tpr_rule = path_and_tpr_rule['tpr_rule']
-    Scheduler.event_chief.raise_event('tpr_rule_ready_to_be_sent',tpr_rule)
-    #print 'path_rule: '
-    #pprint.pprint(path_rule)
-    #rule: from json to xml
-    xml_path_rule = self.form_xml_path_rule(sch_req_id, path_rule)
-    #print 'xml_path_rule: \n', (xml.dom.minidom.parseString(xml_path_rule)).toprettyxml()
-    #########################
-    #Send the sch_job_msg to corresponding transit_session controller
-    #PS: Right now there is only one controller responsible for all the sessions
-    #cont1_ip&l_port = '192.168.56.1', 9999
-    client(info_dict['cont1_listening_from_ip'],
-           info_dict['cont1_listening_from_port'], xml_path_rule)
-    print '--------------------------------------------'
-  """
-  def give_dpid_of_tpr_sw(self, tpr_name):
-    tpr_sw_name = self.gm.give_tpr_sw_name(tpr_name)
-    tpr_sw = self.gm.get_node(tpr_sw_name)
-    if tpr_sw['type'] == 'sw':
-      return tpr_sw['dpid']
-    else:
-      print "tpr_sw is not SW !!!"
-      raise KeyError('Wrong tpr_sw')
-  """
-  def form_swalktprrule_from_swalk(self,s_tp_dst,p_c_ip_list,walk,f_Dp_map):
     tpr_rule_dict = {}
-    tpr_rule_counter = 0
     #
     walk_rule = []
     cur_from_ip = p_c_ip_list[0]
     cur_to_ip = p_c_ip_list[1]
     duration = 50
     cur_node_str = None
-    for i,node_str in list(enumerate(walk)):#node = next_hop
+    for i,node_str in list(enumerate(p_walk)):#node = next_hop
       if i == 0: 
         cur_node_str = node_str
         continue
@@ -338,7 +239,7 @@ class Scheduler(object):
       if cur_node['type'] == 't':
         cur_node_str = node_str
         continue
-      
+      #
       node = self.gm.get_node(node_str)
       edge = self.gm.get_edge(cur_node_str, node_str)
       if node['type'] == 't': #sw-t
@@ -347,29 +248,22 @@ class Scheduler(object):
                           'wc':[cur_from_ip,cur_to_ip,int(s_tp_dst)],
                           'rule':[node['ip'],node['mac'],edge['pre_dev'],duration]
                          })
-        """
-        By assuming the func_list is distributed over the sched_tprs respective
-        to the order.
-        """
         if not (cur_node['dpid'] in tpr_rule_dict):
           tpr_rule_dict[cur_node['dpid']] = [{
-          'tpr_ip':node['ip'],
-          'tpr_mac':node['mac'],
-          'swdev_to_tpr':edge['pre_dev'],
-          'assigned_job':req_dict['func_list'][tpr_rule_counter],
-          'session_tp': int(s_tp_dst),
-          'consumer_ip': cur_to_ip.toStr()
-          }]
+            'tpr_ip':node['ip'],
+            'tpr_mac':node['mac'],
+            'swdev_to_tpr':edge['pre_dev'],
+            'assigned_job':p_itwalkbundle_dict[node_str],
+            'session_tp': int(s_tp_dst),
+            'consumer_ip': cur_to_ip }]
         else:
-          tpr_rule_dict[cur_node['dpid']].append({
-          'tpr_ip':node['ip'],
-          'tpr_mac':node['mac'],
-          'swdev_to_tpr':edge['pre_dev'],
-          'assigned_job':req_dict['func_list'][tpr_rule_counter],
-          'session_tp': int(s_tp_dst),
-          'consumer_ip': cur_to_ip.toStr()
-           })
-        tpr_rule_counter = tpr_rule_counter + 1
+          tpr_rule_dict[cur_node['dpid']].append( [{
+            'tpr_ip':node['ip'],
+            'tpr_mac':node['mac'],
+            'swdev_to_tpr':edge['pre_dev'],
+            'assigned_job':p_itwalkbundle_dict[node_str],
+            'session_tp': int(s_tp_dst),
+            'consumer_ip': cur_to_ip }] )
         cur_from_ip = node['ip']
       elif node['type'] == 'sw': #sw-sw
         walk_rule.append({'conn':[cur_node['dpid'],cur_from_ip],
@@ -401,7 +295,73 @@ class Scheduler(object):
                       })
     """
     return {'walk_rule':walk_rule, 'tpr_rule':tpr_rule_dict}
-
+  
+  def bye_session(self, sch_req_id):
+    self.N -= 1
+    # Send sessions whose "sching job" is done is sent to pre_served category
+    self.sessions_pre_served_dict.update(
+    {sch_req_id: self.sessions_beingserved_dict[sch_req_id]})
+    del self.sessions_beingserved_dict[sch_req_id]
+    
+  def update_sid_res_dict(self):
+    """
+    Network resources will be only the ones on the session_shortest path.
+    It resources need to lie on the session_shortest path.
+    """
+    print '------ update_sid_res_dict ------'
+    #TODO: sessions whose resources are already specified no need for putting them in the loop
+    for s_id in self.sessions_beingserved_dict:
+      p_c_gw_list = self.sessions_beingserved_dict[s_id]['p_c_gw_list']
+      s_all_paths = self.gm.give_all_paths(p_c_gw_list[0], p_c_gw_list[1])
+      #print out all_paths for debugging
+      dict_ = {i:p for i,p in enumerate(s_all_paths)}
+      print 's_id:%i, all_paths:' % s_id
+      pprint.pprint(dict_)
+      #
+      for i,p in dict_.items():
+        p_net_edge_list = self.gm.pathlist_to_netedgelist(p)
+        p_itres_list = self.gm.give_itreslist_on_path(p)
+        if not (s_id in self.sid_res_dict):
+          self.sid_res_dict[s_id] = {'s_info':{}, 'ps_info':{}}
+        self.sid_res_dict[s_id]['ps_info'].update(
+          {i: {'path': p,
+               'net_edge_list': p_net_edge_list,
+               'itres_list': p_itres_list
+              }}
+        )
+    print '---------------- OOO ----------------'
+  def allocate_resources(self):
+    '''
+    returns (alloc_dict, session_walk_bundles_dict)
+    '''
+    self.update_sid_res_dict()
+    sching_opter = SchingOptimizer(self.sessions_beingserved_dict,
+                                   self.actual_res_dict,
+                                   self.sid_res_dict
+                                  )
+    sching_opter.solve()
+    #
+    return sching_opter.get_sching_result()
+  """
+  def give_dpid_of_tpr_sw(self, tpr_name):
+    tpr_sw_name = self.gm.give_tpr_sw_name(tpr_name)
+    tpr_sw = self.gm.get_node(tpr_sw_name)
+    if tpr_sw['type'] == 'sw':
+      return tpr_sw['dpid']
+    else:
+      print "tpr_sw is not SW !!!"
+      raise KeyError('Wrong tpr_sw')
+  """
+  def form_xml_path_rule(self, s_id, path_rule):
+    xml_path_rule = '<scheduling>'
+    xml_path_rule = xml_path_rule + '<session number="{}">'.format(s_id)
+    for rule in path_rule:
+      xml_path_rule = xml_path_rule + self.form_xml_single_rule(rule)
+      
+    xml_path_rule = xml_path_rule + '</session>'
+    xml_path_rule = xml_path_rule + '</scheduling>'
+    return xml_path_rule
+    
   def form_xml_single_rule(self, rule):
     dpid, from_ip = rule['conn'][0], rule['conn'][1]
     typ = rule['typ']
@@ -430,18 +390,9 @@ class Scheduler(object):
       '<rule new_dst_ip="{}" new_dst_mac="{}" fport="{}" duration="{}"/>'.format(rule['rule'][0],
       rule['rule'][1], rule['rule'][2], rule['rule'][3])
     xml_rule = xml_rule + '</connection>'
+    #
     return xml_rule
   
-  def form_xml_path_rule(self, session_num, path_rule):
-    xml_path_rule = '<scheduling>'
-    xml_path_rule = xml_path_rule + '<session number="{}">'.format(session_num)
-    for rule in path_rule:
-      xml_path_rule = xml_path_rule + self.form_xml_single_rule(rule)
-      
-    xml_path_rule = xml_path_rule + '</session>'
-    xml_path_rule = xml_path_rule + '</scheduling>'
-    return xml_path_rule
-    
   def send_to_controller(self, ip, port, message):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((ip, port))
@@ -462,27 +413,27 @@ class Scheduler(object):
     self.gm.graph_add_edges(node_edge_lst['edge_lst'])
     
   def test(self):
-    num_session = 4
+    num_session = 3
     '''
     sr1:
-      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']}
+      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3']}
       {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0}
     '''
     '''
-    {'data_amount':2, 'slack_metric':60, 'func_list':['f1', 'f2']},
-    {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
-    {'data_amount':0.1, 'slack_metric':4, 'func_list':['f1']},
+    {'data_size':2, 'slack_metric':60, 'func_list':['f1', 'f2']},
+    {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3']},
+    {'data_size':0.1, 'slack_metric':4, 'func_list':['f1']},
     '''
-    req_dict_list = [ {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':1},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
-                      {'data_amount':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2},
+    req_dict_list = [ {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':1, 'par_share':[1]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
+                      {'data_size':1, 'slack_metric':24, 'func_list':['f1','f2','f3'], 'parism_level':2, 'par_share':[0.5, 0.5]},
                     ]
     """
     app_pref_dict_list = [
@@ -501,8 +452,8 @@ class Scheduler(object):
     """
     app_pref_dict_list = [
                           {'m_p': 10,'m_u': 1,'x_p': 0,'x_u': 0},
+                          {'m_p': 1,'m_u': 0.1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
-                          {'m_p': 1,'m_u': 0.5,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
                           {'m_p': 1,'m_u': 1,'x_p': 0,'x_u': 0},
