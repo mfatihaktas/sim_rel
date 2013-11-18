@@ -2,11 +2,14 @@
 echo $1 $2
 if [ $1 = 'run' ]
 then
-	sudo -u mehmet flowvisor
+	sudo -u flowvisor flowvisor
 
 elif [ $1 = 'run-d' ]
 then 
-	sudo -u flowvisor flowvisor -d DEBUG -l
+	sudo -u flowvisor flowvisor -d DEBUG
+elif [ $1 = 'run-l' ]
+then
+	sudo -u flowvisor flowvisor -l
 elif [ $1 = 'ls' ]
 then
 	fvctl -f fvpasswd_file list-slices
@@ -41,22 +44,22 @@ then
 	
 elif [ $1 = 'as' ] #to add the slices "sliced" by different controllers
 then
-	fvctl -f fvpasswd_file add-slice --password=1  allslice tcp:192.168.56.1:9011 mfa
-	fvctl -f fvpasswd_file add-slice --password=1 cnt1slice tcp:192.168.56.1:9001 mfa
-	fvctl -f fvpasswd_file add-slice --password=1 sch_cntslice tcp:192.168.56.1:9010 mfa
+	#fvctl -f fvpasswd_file add-slice --password=1  allslice tcp:192.168.56.1:9011 mfa
+	fvctl -f fvpasswd_file add-slice --password=1 acterslice tcp:192.168.56.1:9001 mfa
+	fvctl -f fvpasswd_file add-slice --password=1 scherslice tcp:192.168.56.1:9010 mfa
 	fvctl -f fvpasswd_file add-slice --password=1 arpslice tcp:192.168.56.1:9111 mfa
 elif [ $1 = 'rs' ]
 then
 	fvctl -f fvpasswd_file remove-slice allslice
-	fvctl -f fvpasswd_file remove-slice cnt1slice
-	fvctl -f fvpasswd_file remove-slice sch_cntslice
-	#fvctl -f fvpasswd_file remove-slice arpslice
+	fvctl -f fvpasswd_file remove-slice acterslice
+	fvctl -f fvpasswd_file remove-slice scherslice
+	fvctl -f fvpasswd_file remove-slice arpslice
 elif [ $1 = 'af' ]
 then
-	fvctl -f fvpasswd_file add-flowspace allflowspace all 1 any allslice=6 #,myslice2=0
-	fvctl -f fvpasswd_file add-flowspace cnt1flowspace all 10 tp_dst=6000 cnt1slice=7 #,myslice2=0
-	fvctl -f fvpasswd_file add-flowspace sch_cntflowspace all 10 tp_dst=7000 sch_cntslice=7 #,myslice2=0
-	fvctl -f fvpasswd_file add-flowspace arpflowspace all 10 dl_type=0x806 arpslice=7 #,myslice2=0
+	#fvctl -f fvpasswd_file add-flowspace allflowspace all 1 any allslice=6 #,myslice2=0
+	fvctl -f fvpasswd_file add-flowspace acterflowspace all 10 any acterslice=7 #,myslice2=0, tp_dst=6000
+	fvctl -f fvpasswd_file add-flowspace scherflowspace all 10 tp_dst=7000 scherslice=7 #,myslice2=0
+	fvctl -f fvpasswd_file add-flowspace arpflowspace all 100 dl_type=0x806 arpslice=7 #,myslice2=0
 else
 	echo "Argument did not match !"
 fi

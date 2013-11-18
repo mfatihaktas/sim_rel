@@ -6,9 +6,9 @@ then
 elif [ $1 = 'sch2' ]
 then
 	./pox.py openflow.of_01 --port=8002 my_controller #misc.arp_responder --10.0.0.255=11:00:00:00:00:01 --10.0.0.254=11:00:00:00:00:02
-elif [ $1 = 'cnt1' ]
+elif [ $1 = 'act' ]
 then
-	./pox.py openflow.of_01 --port=9001 controller1 --proactive_install=True  #misc.arp_responder --10.0.0.255=11:00:00:00:00:01
+	./pox.py openflow.of_01 --port=9001 actuator --proactive_install=True  #misc.arp_responder --10.0.0.255=11:00:00:00:00:01
 elif [ $1 = 'sch' ]
 then
 	./pox.py openflow.of_01 --port=9010 sch_controller #misc.arp_responder --no_learn=True

@@ -1,0 +1,50 @@
+INFO:root:
+nodename=t11
+lsching_port=7000
+bind_intf=eth0
+logto=file
+INFO:root:ThreadedUDPServer for SCHING started at lsching_addr:10.0.0.11, lsching_port:7000
+INFO:root:t11 is ready...
+INFO:root:ItNode rxed from Scher cur_thread:Thread-3 
+ data:{"data": {"data_to_ip": "10.0.0.1", "datasize": 1.0, "s_tp": 6000, "comp": 2.83333333313, "itfunc_dict": {"f1": 2.0, "f2": 0.83333333313}, "proc": 288.935318783}, "type": "itjobrule"}
+INFO:root:ThreadedUDPServer for SESSION started at session_l_addr:10.0.0.11, ls_port:6000
+INFO:root:new s with tpdst:6000 is welcomed
+INFO:root:s_info_dict[6000]:
+{'itjobrule': {u'comp': 2.83333333313,
+               u'data_to_ip': u'10.0.0.1',
+               u'datasize': 1.0,
+               u'itfunc_dict': {u'f1': 2.0, u'f2': 0.83333333313},
+               'jobtobedone': {u'f1': 1.0, u'f2': 0.2083333332825},
+               u'proc': 288.935318783},
+ 's_server': <__main__.ThreadedUDPServer instance at 0xebe908>}
+INFO:root:ItNode rxed from Scher cur_thread:Thread-5 
+ data:{"data": {"data_to_ip": "10.0.0.1", "datasize": 1.0, "s_tp": 6000, "comp": 2.83333333313, "itfunc_dict": {"f1": 2.0, "f2": 0.8INFO:root:_handle_SessionSoftTimerExpire is called !
+INFO:root:------
+e s with tpdst:6000
+INFO:root:ThreadedUDPServer for SESSION started at session_l_addr:10.0.0.11, ls_port:6000
+INFO:root:new s with tpdst:6000 is welcomed
+INFO:root:s_info_dict[6000]:
+{'itjobrule': {u'comp': 2.83333333313,
+               u'data_to_ip': u'10.0.0.1',
+               u'datasize': 1.0,
+               u'itfunc_dict': {u'f1': 2.0, u'f2': 0.83333333313},
+               'jobtobedone': {u'f1': 1.0, u'f2': 0.2083333332825},
+               u'proc': 288.935318783},
+ 's_server': <__main__.ThreadedUDPServer instance at 0xebe908>}
+INFO:root:ItNode rxed from Scher cur_thread:Thread-7 
+ data:{"data": {"data_to_ip": "10.0.0.1", "datasize": 1.0, "s_tp": 6000, "comp": 2.83333333313, "itfunc_dict": {"f1": 2.0, "f2": 0.83333333313}, "proc": 288.935318783}, "type": "itjobrule"}
+INFO:root:bye s with tpdst:6000
+INFO:root:ThreadedUDPServer for SESSION started at session_l_addr:10.0.0.11, ls_port:6000
+INFO:root:new s with tpdst:6000 is welcomed
+INFO:root:s_info_dict[6000]:
+{'itjobrule': {u'comp': 2.83333333313,
+               u'data_to_ip': u'10.0.0.1',
+               u'datasize': 1.0,
+               u'itfunc_dict': {u'f1': 2.0, u'f2': 0.83333333313},
+               'jobtobedone': {u'f1': 1.0, u'f2': 0.2083333332825},
+               u'proc': 288.935318783},
+ 's_server': <__main__.ThreadedUDPServer instance at 0xebe908>}
+INFO:root:ItNode rxed s_data of size:79Bs over cur_thread:Thread-9, s_tp_dst:6000
+INFO:root:f1 is on action
+INFO:root:f2 is on action
+INFO:root:proced data is forwarded to_ip:10.0.0.1

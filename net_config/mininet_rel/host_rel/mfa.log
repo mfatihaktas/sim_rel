@@ -1,0 +1,23 @@
+INFO:root:
+nodename=mfa
+lsching_port=7000
+bind_intf=wlan0
+logto=file
+INFO:root:ThreadedUDPServer for SCHING started at lsching_addr:192.168.234.244, lsching_port:7000
+INFO:root:mfa is ready...
+INFO:root:ItNode rxed from Scher cur_thread:Thread-3 
+ data:{"data": {"data_to_ip": "10.0.0.1", "datasize": 0.5, "s_tp": 6000, "comp": 2.83333333313, "itfunc_dict": {"f2": 2.83333333313}, "proc": 288.935318788}, "type": "itjobrule"}
+INFO:root:ThreadedUDPServer for SESSION started at session_l_addr:192.168.234.244, ls_port:6000
+INFO:root:new s with tpdst:6000 is welcomed
+INFO:root:s_info_dict[6000]:
+{'itjobrule': {u'comp': 2.83333333313,
+               u'data_to_ip': u'10.0.0.1',
+               u'datasize': 0.5,
+               u'itfunc_dict': {u'f2': 2.83333333313},
+               'jobtobedone': {u'f2': 0.35416666664125},
+               u'proc': 288.935318788},
+ 's_server': <__main__.ThreadedUDPServer instance at 0xfd10e0>}
+INFO:root:_handle_SessionSoftTimerExpire is called !
+INFO:root:------
+INFO:root:sching_server is shutdown.
+INFO:root:stpdst=6000, s_server is shutdown.

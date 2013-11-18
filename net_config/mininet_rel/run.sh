@@ -15,7 +15,7 @@ then
   #python producer.py 10.0.0.1 7000 short_data.dat
 elif [ $1  = 't' ]
 then
-	python -i transit.py --nodename=mfa --lsching_port=7000 --bind_intf=wlan0 --logto=file
+	python transit.py --nodename=mfa --lsching_port=7000 --bind_intf=wlan0 --logto=file
 elif [ $1  = 't11' ]
 then
 	python transit.py --nodename=t11 --lsching_port=7000 --bind_intf=eth0 --logto=file
@@ -27,13 +27,10 @@ then
 	python transit.py --nodename=t31 --lsching_port=7000 --bind_intf=eth0 --logto=file
 elif [ $1  = 'ds' ]
 then
-	python dummy_sender.py 192.168.234.244 7000
+	python dummy_sender.py 192.168.239.64 7000
 elif [ $1  = 'dsp' ]
 then
 	python dummy_sender.py 10.0.0.1 6000
-elif [ $1  = 'dr' ]
-then
-	python dummy_receiver.py --lintf=wlan0 --lport=7000
 else
 	echo "Argument did not match !"
 fi

@@ -19,7 +19,7 @@ class ThreadedUDPRequestHandler_SCH(SS.BaseRequestHandler):
     cur_thread = threading.current_thread()
     #print 'client_address:', self.client_address[0]
     #
-    if 1: #self.client_address[0] == info_dict['scher_ip']:
+    if self.client_address[0] == info_dict['scher_ip']:
       logging.info('ItNode rxed from Scher cur_thread:%s \n data:%s', cur_thread.name, data)
       response = 'OK'
       socket.sendto(response, self.client_address)
@@ -300,8 +300,7 @@ def main(argv):
   log_globalvars()
   init_tservice(lsching_port, bind_intf)
   #
-  #raw_input('Enter')
-  time.sleep(100000)
+  raw_input('Enter')
   shutdown_tservice()
   
 if __name__ == "__main__":
