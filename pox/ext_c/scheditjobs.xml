@@ -1,0 +1,30 @@
+<scheduling>
+  <session p_id="0" s_id="0">
+    <connection dpid="1">
+      <itjob>
+        <jobinfo comp="2.83333333313" data_to_ip="10.0.0.1" datasize="1.0" proc="288.935318783" s_tp="6000">
+          <func comp="2" tag="f1" />
+          <func comp="0.83333333313" tag="f2" />
+        </jobinfo>
+        <walkinfo node_ip="10.0.0.11" node_mac="00:00:00:00:01:01" swdev_to_node="s1-eth4" />
+      </itjob>
+    </connection>
+    <connection dpid="3">
+      <itjob>
+        <jobinfo comp="2.83333333313" data_to_ip="10.0.0.1" datasize="1.0" proc="288.935318783" s_tp="6000">
+          <func comp="2.83333333313" tag="f2" />
+        </jobinfo>
+        <walkinfo node_ip="10.0.0.31" node_mac="00:00:00:00:03:01" swdev_to_node="s3-eth3" />
+      </itjob>
+    </connection>
+    <connection dpid="2">
+      <itjob>
+        <jobinfo comp="2.83333333313" data_to_ip="10.0.0.1" datasize="1.0" proc="288.935318783" s_tp="6000">
+          <func comp="0.333333333739" tag="f2" />
+          <func comp="2.49999999939" tag="f3" />
+        </jobinfo>
+        <walkinfo node_ip="10.0.0.21" node_mac="00:00:00:00:02:01" swdev_to_node="s2-eth4" />
+      </itjob>
+    </connection>
+  </session>
+</scheduling>

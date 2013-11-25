@@ -1,7 +1,3 @@
-'''
-i. from n:num_it_funcs to p:proc_perc_done_it
-'''
-
 # cvxpy related imports
 from cvxpy import *
 import pprint
@@ -9,9 +5,7 @@ import numpy as np
 import sys
 #
 from collections import namedtuple
-
 import __builtin__
-
 
 class SchingOptimizer:
     def __init__(self, sessions_beingserved_dict, actual_res_dict,
@@ -33,11 +27,11 @@ class SchingOptimizer:
       """
       # func_compconstant_dict; key:function, val:comp_constant (2-8)
       self.func_compconstant_dict = {
-        'f0':1,
-        'f1':2,
-        'f2':4,
-        'f3':2.5,
-        'f4':5
+        'f0':0.5,
+        'f1':1,
+        'f2':2,
+        'f3':3,
+        'f4':4
       }
       self.s_pref_dict = {
         0:{'p':1, 'u':1},
@@ -72,8 +66,8 @@ class SchingOptimizer:
       #RESOURCE ALLOC for each session; modeling parameter
       self.r_bw = variable(self.N,self.num_link,name='r_bw')
       self.r_bw__p_bw_map()
-      self.r_proc2 = variable(self.N,self.num_itr,name='r_proc2')
-      self.r_dur2 = variable(self.N,self.num_itr,name='r_dur2')
+      self.r_proc2 = parameter(self.N,self.num_itr,name='r_proc2')
+      self.r_dur2 = parameter(self.N,self.num_itr,name='r_dur2')
       '''
       Problem:
       Intersection of s_path_itres sets become is a bug for speculation
@@ -94,6 +88,12 @@ class SchingOptimizer:
       #to find out actual stor used by <bw_vector, dur_vector>
       #will be filled up in grab_sching
       self.r_stor_actual = [0]*self.num_itr #list index: res_id
+      #
+      self.sp_tx = parameter(self.N,self.max_numspaths, name='sp_tx')
+      self.sp_proc = parameter(self.N,self.max_numspaths, name='sp_proc')
+      self.sp_dur = parameter(self.N,self.max_numspaths, name='sp_dur')
+      self.sp_trans = parameter(self.N,self.max_numspaths, name='sp_trans')
+      self.fill__sp_txprocdurtrans_matrices()
       #To avoid re-run of r_hard&soft stuff
       self.r_hard_vector = parameter(self.N,1, name='r_hard_vector')
       self.r_soft_vector = parameter(self.N,1, name='r_soft_vector')
@@ -122,7 +122,7 @@ class SchingOptimizer:
         r_ = parameter(vs[0],1, attribute='nonnegative')
         for i in range(0,vs[0]):
           r_[i,0] = square(v[i,0])
-        
+    
         return sum(r_)
       #
       # itr_storage requirement modeling for self.r_storstaging
@@ -134,7 +134,7 @@ class SchingOptimizer:
         #(0.001/2)*( square(norm2(bw_vector))+square(norm2(dur_vector)) )
         #(0.001/2)*( power_pos(norm2(bw_vector), 2)+power_pos(norm2(dur_vector), 2) )
       #print 'r_stor: ', self.r_stor
-      
+    
     def r_proc2dur2__r_procdur_map(self):
       par_proc2 = parameter(self.N,self.num_itr, name = 'par_proc2')
       par_proc2.value = zeros((self.N,self.num_itr))
@@ -203,11 +203,15 @@ class SchingOptimizer:
       par_dur.value = zeros((self.N,self.max_numspaths))
       for s_id in self.sid_res_dict:
         ps_info_dict = self.sid_res_dict[s_id]['ps_info']
-        for p_id, p_info_dict in ps_info_dict.items():
+        #s_pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        #for p_id in range(0, s_pl):
+        for p_id in range(0, len(ps_info_dict)):
+          p_info_dict = ps_info_dict[p_id]
           for itr_id in p_info_dict['p_itrid_list']:
             itr_id_ = itr_id - self.ll_index - 1
-            s_id_ = s_id+p_id*self.N 
+            s_id_ = s_id+p_id*self.N
             if par_proc[s_id,p_id].value == 0 and par_dur[s_id,p_id].value == 0: #not touched yet
+              #print 's_id_:%i, itr_id_:%i' % (s_id_,itr_id_)
               par_proc[s_id,p_id] = self.r_proc[s_id_,itr_id_]
               par_dur[s_id,p_id] = self.r_dur[s_id_,itr_id_]
             else:
@@ -228,7 +232,7 @@ class SchingOptimizer:
       s_sparsity_dict = {}
       total_sparsity = 0
       for s_id in self.sid_res_dict:
-        numspaths = len(self.sid_res_dict[s_id]['ps_info'])
+        #numspaths = len(self.sid_res_dict[s_id]['ps_info'])
         parism_level = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
         num_ssparsity = self.max_numspaths-parism_level
         s_sparsity_dict[s_id] = num_ssparsity
@@ -276,7 +280,7 @@ class SchingOptimizer:
     
     def r_bwprocdur_sparsity_constraint(self):
       s_rid_notindomain_list = []
-      for s_id in self.sid_res_dict:
+      for s_id in range(0, self.N):
         ps_info_dict = self.sid_res_dict[s_id]['ps_info']
         '''
         #r_bw sparsity is already ensured by par_: zeros matrix (in r_bw__p_bw_map())
@@ -285,7 +289,12 @@ class SchingOptimizer:
             const_bw.append(eq(self.r_bw[s_id, rbw_id], 0))
         '''
         #
-        for p_id, p_info_dict in ps_info_dict.items():
+        #s_pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        #when parism_level<num_paths this method does not give correct output by
+        #setting s_pl like the above line shows
+        s_pl = len(ps_info_dict)
+        for p_id in range(0, s_pl):
+          p_info_dict = ps_info_dict[p_id]
           for itr_id in range(0, self.num_itr):
             itr_id_ = itr_id + self.ll_index + 1
             if not (itr_id_ in p_info_dict['p_itrid_list']):
@@ -294,23 +303,73 @@ class SchingOptimizer:
       num_ = len(s_rid_notindomain_list)
       par_for_proc = parameter(num_,1, name="par_for_proc" )
       par_for_dur = parameter(num_,1, name="par_for_dur" )
-      for i,tup in enumerate(s_rid_notindomain_list):
-        s_id_ = tup[0]+tup[1]*self.N
-        par_for_proc[i,0] = self.r_proc[s_id_, tup[2]]
-        par_for_dur[i,0] = self.r_dur[s_id_, tup[2]]
-      #
-      return  eq(par_for_proc, 0) + \
-              eq(par_for_dur, 0)
-    
+      #again to workaround this stupid cvxpy error=TypeError: 'cvxpy_scalar_param' object does not support item assignment
+      if num_ == 1:
+        for i,tup in enumerate(s_rid_notindomain_list):
+          s_id_ = tup[0]+tup[1]*self.N
+          par_for_proc = self.r_proc[s_id_, tup[2]]
+          par_for_dur = self.r_dur[s_id_, tup[2]]
+        inter_par_ = vstack( (par_for_proc, par_for_dur) )
+        return eq(inter_par_, 0)
+      else:
+        for i,tup in enumerate(s_rid_notindomain_list):
+          s_id_ = tup[0]+tup[1]*self.N
+          par_for_proc[i,0] = self.r_proc[s_id_, tup[2]]
+          par_for_dur[i,0] = self.r_dur[s_id_, tup[2]]
+        #
+        return  eq(par_for_proc, 0) + \
+                eq(par_for_dur, 0)
+
     ###################          OOO             ###############################
+    def fill__sp_txprocdurtrans_matrices(self):
+      if self.N == 1 and self.max_numspaths == 1: #to workaround [0,0] indexing problem of cvxpy_scalars
+        s_req_dict = self.sessions_beingserved_dict[0]['req_dict']
+        s_ds = s_req_dict['data_size']
+        s_par_share = s_req_dict['par_share']
+        sp_ds = s_ds*s_par_share[0]
+        num_itres = len(self.sid_res_dict[0]['ps_info'][0]['itres_list'])
+        l_ = self.txprocdurtrans_time_model(s_id = 0, p_id = 0,
+                                            datasize = sp_ds,
+                                            pcomp = s_req_dict['proc_comp'],
+                                            num_itres = num_itres)
+        self.sp_tx = l_[0]
+        self.sp_proc = l_[1]
+        self.sp_dur = l_[2]
+        self.sp_trans = l_[3]
+      else:
+        for s_id in range(0, self.N):
+          s_req_dict = self.sessions_beingserved_dict[s_id]['req_dict']
+          s_ds = s_req_dict['data_size']
+          s_par_share = s_req_dict['par_share']
+          s_pl = s_req_dict['parism_level']
+          ps_info = self.sid_res_dict[s_id]['ps_info']
+          for p_id in range(0,s_pl):
+            num_itres = len(ps_info[p_id]['itres_list'])
+            sp_ds = s_ds*s_par_share[p_id]
+            l_ = self.txprocdurtrans_time_model(s_id = s_id, p_id = p_id,
+                                                datasize = sp_ds,
+                                                pcomp = s_req_dict['proc_comp'],
+                                                num_itres = num_itres)
+            self.sp_tx[s_id,p_id] = l_[0]
+            self.sp_proc[s_id,p_id] = l_[1]
+            self.sp_dur[s_id,p_id] = l_[2]
+            self.sp_trans[s_id,p_id] = l_[3]
+      '''
+      #printout
+      print 'self.sp_tx:\n', self.sp_tx
+      print 'self.sp_proc:\n', self.sp_proc
+      print 'self.sp_dur:\n', self.sp_dur
+      print 'self.sp_trans:\n', self.sp_trans
+      '''
+    
     def fill__r_hardsoft__s_penutil_vectors(self):
       if self.N == 1: #to workaround [0,0] indexing problem of cvxpy_scalars
         self.r_hard_vector = self.R_hard(0)
         self.r_soft_vector = self.R_soft(0)
         #
-        s_st = self.sessions_beingserved_dict[s_id]['req_dict']['slack_metric']
+        s_st = self.sessions_beingserved_dict[0]['req_dict']['slack_metric']
         self.s_pen_vector = self.P(0, square(self.tt-s_st))
-        self.s_util_vector = self.U(s_id, self.r_soft_vector)
+        self.s_util_vector = self.U(0, self.r_soft_vector)
       else:
         for s_id in range(0, self.N):
           self.r_hard_vector[s_id,0] = self.R_hard(s_id)
@@ -326,28 +385,17 @@ class SchingOptimizer:
       print 'self.s_pen_vector: \n', self.s_pen_vector
       print 'self.s_util_vector: \n', self.s_util_vector
       '''
-        
+    
     # Constraint modeling functions
     def tt_epigraph_form_constraint(self):
-      '''
-      if self.N == 1:
-        trans_time = self.r_hard_vector[0,0]
-        return leq(trans_time, self.tt )
-      '''
       # trans_time_i <= tt_i ; i=0,1,2,3,...,N-1
-      return leq(self.r_hard_vector[:,0], self.tt)
-      
+      return leq(self.r_hard_vector, self.tt)
+    
     def constraint0(self):
-      '''
-      session_func_list_length_vector = zeros((1,self.N))
-      for s_id in self.sessions_beingserved_dict:
-        session_func_list_length_vector[0,s_id] = (self.n_grain**-1) * \
-        len(self.sessions_beingserved_dict[s_id]['req_dict']['func_list'])
-      '''
       #TODO: Experiment with bw & proc lower bound to see if dur will take action in sching.
       #a[0,:] >= bw_lb + a[1,:] >= proc_lb + a[2:3,:] >= 0
-      bw_lb = 0
-      proc_lb = 0
+      #bw_lb = 0
+      #proc_lb = 0
       #
       #a >= 0 + tt >= 0 + n_i <= length(func_list_i)
       #r_bw >= 0 + r_proc >= 0 + r_stor >= 0
@@ -356,7 +404,7 @@ class SchingOptimizer:
              geq(self.r_dur, 0) + \
              [leq(self.a[3,:], 1)] + \
              [geq(self.tt, 0)] # + \
-             
+      
       '''
              geq(self.a[0,:], bw_lb) + \
              geq(self.a[1,:], proc_lb) + \
@@ -366,7 +414,7 @@ class SchingOptimizer:
              geq(self.r_proc, 0) + \
              geq(self.p_bw, 0) + \
       '''
-             
+    
     def res_cap_constraint(self):
       # resource capacity constraints
       res_id_info_map = self.actual_res_dict['id_info_map']
@@ -409,19 +457,27 @@ class SchingOptimizer:
         trans_t = self.r_hard_vector.value
         tt = self.tt.value
         [s_itwalkinfo_dict, s_pwalk_dict] = self.get_session_itwalkbundle_dict__walk(0)
-        #Adding p_bwprocdur info
+        ittime = self.it_time__basedon_itwalkinfo_dict(s_itwalkinfo_dict)
+        #
         s_ps_info = self.sid_res_dict[0]['ps_info']
         num_ps = len(s_ps_info)
-        p_bw, p_proc, p_dur = [0]*num_ps, [0]*num_ps, [0]*num_ps
+        p_bw = p_proc = p_dur = []
+        sp_txt = sp_proct = sp_durt = sp_transt = []
         for k in range(0,num_ps):
-          p_bw[k] = self.p_bw[0,k].value
-          p_proc[k] = self.p_proc[0,k].value
-          p_dur[k] = self.p_dur[0,k].value
+          #Adding p_bwprocdur info
+          p_bw.append(self.p_bw[0,k].value)
+          p_proc.append(self.p_proc[0,k].value)
+          p_dur.append(self.p_dur[0,k].value)
+          #Adding sp_txprocdurtrans info
+          sp_txt.append(self.sp_tx[0,k].value)
+          sp_proct.append(self.sp_proc[0,k].value)
+          sp_durt.append(self.sp_dur[0,k].value)
+          sp_transt.append(self.sp_trans[0,k].value)
         #
         self.session_res_alloc_dict['s-wise'][0] = {
                                              'p_bw':p_bw, 'p_proc':p_proc, 'p_dur':p_dur,
                                              'bw':bw, 'proc':proc,
-                                             'dur':dur, 'n':n,
+                                             'dur':dur, 'n':n,'n**2':n**2,
                                              'stor':0.001*(bw*dur),
                                              'tt': tt,
                                              'trans_time': trans_t, #r_hard_perf
@@ -434,7 +490,12 @@ class SchingOptimizer:
                                              'parism_level': s_parism_level,
                                              'itwalkinfo_dict': s_itwalkinfo_dict,
                                              'pwalk_dict': s_pwalk_dict,
-                                             'soft_pi': n #(n/s_n_max)*100
+                                             'soft_pi': n, #(n/s_n_max)*100
+                                             'sp_txt':sp_txt,
+                                             'sp_proct':sp_proct,
+                                             'sp_durt':sp_durt,
+                                             'sp_transt':sp_transt,
+                                             'ittime':ittime
                                             }
                                             #'f_itcp_map': f_itcp_map,
       else:
@@ -457,19 +518,27 @@ class SchingOptimizer:
           trans_t = self.r_hard_vector[i,0].value
           tt = self.tt[i,0].value
           [s_itwalkinfo_dict, s_pwalk_dict] = self.get_session_itwalkbundle_dict__walk(i)
-          #Adding p_bwprocdur info
+          ittime = self.it_time__basedon_itwalkinfo_dict(s_itwalkinfo_dict)
+          #
           s_ps_info = self.sid_res_dict[i]['ps_info']
           num_ps = len(s_ps_info)
-          p_bw, p_proc, p_dur = [0]*num_ps, [0]*num_ps, [0]*num_ps
+          p_bw,p_proc,p_dur = [],[],[]
+          sp_txt,sp_proct,sp_durt,sp_transt = [],[],[],[]
           for k in range(0,num_ps):
-            p_bw[k] = self.p_bw[i,k].value
-            p_proc[k] = self.p_proc[i,k].value
-            p_dur[k] = self.p_dur[i,k].value
+            #Adding p_bwprocdur info
+            p_bw.append(self.p_bw[i,k].value)
+            p_proc.append(self.p_proc[i,k].value)
+            p_dur.append(self.p_dur[i,k].value)
+            #Adding sp_txprocdurtrans info
+            sp_txt.append(self.sp_tx[i,k].value)
+            sp_proct.append(self.sp_proc[i,k].value)
+            sp_durt.append(self.sp_dur[i,k].value)
+            sp_transt.append(self.sp_trans[i,k].value)
           #
           self.session_res_alloc_dict['s-wise'][i] = {
                                                'p_bw':p_bw, 'p_proc':p_proc, 'p_dur':p_dur,
                                                'bw':bw, 'proc':proc,
-                                               'dur':dur, 'n':n,
+                                               'dur':dur, 'n':n,'n**2':n**2,
                                                'stor':0.001*(bw*dur),
                                                'tt': tt,
                                                'trans_time': trans_t, #r_hard_perf
@@ -482,7 +551,12 @@ class SchingOptimizer:
                                                'parism_level': s_parism_level,
                                                'itwalkinfo_dict': s_itwalkinfo_dict,
                                                'pwalk_dict': s_pwalk_dict,
-                                               'soft_pi': n #(n/s_n_max)*100
+                                               'soft_pi': n, #(n/s_n_max)*100
+                                               'sp_txt':sp_txt,
+                                               'sp_proct':sp_proct,
+                                               'sp_durt':sp_durt,
+                                               'sp_transt':sp_transt,
+                                               'ittime':ittime
                                               }
                                               #'f_itcp_map': f_itcp_map,
       ###########################   RES-WISE   #################################
@@ -493,9 +567,12 @@ class SchingOptimizer:
         #link_cap total usage
         self.session_res_alloc_dict['res-wise'][i] = {'bw': r_bw_in_column[i,0].value}
         #link_cap-session portion alloc
-        self.session_res_alloc_dict['res-wise'][i].update(
-          {'bw_palloc_list': [float(e) for e in self.r_bw[:,i].value] }
-        )
+        if self.N == 1:
+          self.session_res_alloc_dict['res-wise'][i].update(
+            {'bw_palloc_list': [self.r_bw[:,i].value] })
+        else:
+          self.session_res_alloc_dict['res-wise'][i].update(
+            {'bw_palloc_list': [float(e) for e in self.r_bw[:,i].value] })
       
       #FOR it-resources
       def dot(v1, v2):
@@ -512,25 +589,35 @@ class SchingOptimizer:
         bw_vector = ((self.a[0, :]).T).value #Nx1
         self.r_stor_actual[i] = dot(dur_vector, bw_vector)*0.001
         #res_cap total usage
-        #dump trick to work-around Cvxpy's not being able to turn SOMEthings to Python scalar
-        stor_model_val = [float(e) for e in self.r_stor[i,0].value][0]
+        if self.N == 1:
+          stor_model_val = self.r_stor[i,0].value
+        else:
+          #dump trick to work-around Cvxpy's not being able to turn SOMEthings to Python scalar
+          stor_model_val = [float(e) for e in self.r_stor[i,0].value][0]
         self.session_res_alloc_dict['res-wise'][i+self.num_link] = {
           'proc': r_proc_in_column[i,0].value,
           'stor_model': stor_model_val,
           'stor_actual': float(self.r_stor_actual[i])
         }
         #res_cap-session portion alloc
-        self.session_res_alloc_dict['res-wise'][i+self.num_link].update(
-        {
-          'proc_palloc_list': [float(e) for e in self.r_proc2[:,i].value],
-          'dur_palloc_list': [float(e) for e in self.r_dur2[:,i].value]
-        })
+        if self.N == 1:
+          self.session_res_alloc_dict['res-wise'][i+self.num_link].update(
+          {
+            'proc_palloc_list': self.r_proc2[:,i].value,
+            'dur_palloc_list': self.r_dur2[:,i].value
+          })
+        else:
+          self.session_res_alloc_dict['res-wise'][i+self.num_link].update(
+          {
+            'proc_palloc_list': [float(e) for e in self.r_proc2[:,i].value],
+            'dur_palloc_list': [float(e) for e in self.r_dur2[:,i].value]
+          })
       #
       
       #general info about sching_decision
       self.session_res_alloc_dict['general']['max_numspaths'] = self.max_numspaths
       self.session_res_alloc_dict['general']['ll_index'] = self.ll_index
-      
+    
     def solve(self):
       #self.resource_assign_model()
       (self.scal_var).value = 1
@@ -608,7 +695,7 @@ class SchingOptimizer:
       print '||||||||||||||||||||||||||||||||||||'
       '''
       self.grab_sching_result()
-      
+    
     # modeling functions
     def trans_time_calc(self,s_pl,s_ds,s_pc,s_st,p_bw,ps_list,n=None,p_proc=None,p_dur=None):
       #To workaround dump assignment problem of par arrays in Cvxpy
@@ -620,7 +707,7 @@ class SchingOptimizer:
         if (p_proc == None and p_dur == None and n == None): #called from feasibilize_sching_info
           p_transt_list.append(tx_t) #+ path_latency
         elif (p_proc != None and p_dur != None and n != None): #called to calc true trans_time
-          proc_t = p_ds*s_pc* 1000*(n**2)/p_proc[pl_id]
+          proc_t = p_ds*s_pc* 1000*(n**2)/p_proc[pl_id] #in (ms)
           stage_t = p_dur[pl_id] # in (ms)
           p_transt_list.append(tx_t + proc_t + stage_t) #+ path_latency
         else:
@@ -628,39 +715,48 @@ class SchingOptimizer:
           print '### Abort.'
           sys.exit(0)
       return __builtin__.max(p_transt_list) #s_transt
-      
-    def trans_time_model(self,s_id, s_pl,s_ds,s_pc,s_st,ps_list):
-      #To workaround dump assignment problem of par arrays in Cvxpy
-      if s_pl == 1:
-        tx_t = s_ds*1000*quad_over_lin(1, self.p_bw[s_id,0]) # in (ms)
-        proc_t = s_ds*s_pc* 1000*quad_over_lin(self.a[3,s_id], self.a[1,s_id]) # in (ms)
-        stage_t = self.a[2,s_id] # in (ms)
-        return tx_t + proc_t + stage_t  #+ path_latency
+    
+    def txprocdurtrans_time_model(self,s_id,p_id, datasize,pcomp,num_itres):
+      def sp_proc_model(s_id,p_id):
+        '''To get correct proc_time model not 1/(r1_proc + r2_proc + ...) but 1/r1_proc + 1/r2_proc + ... '''
+        p_itrid_list = self.sid_res_dict[s_id]['ps_info'][p_id]['p_itrid_list']
+        list_ = []
+        for itr_id in p_itrid_list:
+          itr_id_ = itr_id - self.ll_index - 1
+          s_id_ = s_id+p_id*self.N
+          #
+          list_.append(quad_over_lin(self.a[3,s_id], self.r_proc[s_id_,itr_id_]))
+        return sum(list_)
       #
-      p_transt_vector = parameter(s_pl,1, name='p_transt_vector')
-      for pl_id in range(0,s_pl):
-        p_ds = s_ds*ps_list[pl_id]
-        tx_t = p_ds*1000*quad_over_lin(1, self.p_bw[s_id,pl_id]) # in (ms)
-        #Assumption: Relation between proc_time and n is quadratic.
-        proc_t = p_ds*s_pc* 1000*quad_over_lin(self.a[3,s_id], self.a[1,s_id]) # in (ms)
-        stage_t = self.a[2,s_id] # in (ms)
-        p_transt_vector[pl_id,0] = tx_t + proc_t + stage_t  #+ path_latency
-      return max(p_transt_vector) #s_transt
+      tx_t = datasize*1000*quad_over_lin(1, self.p_bw[s_id,p_id]) # in (ms)
+      #TODO: Funny comment below fix it !!!
+      #Assumption: Relation between proc_time and n is quadratic.
+      pm = quad_over_lin(self.a[3,s_id], self.p_proc[s_id,p_id]) #sp_proc_model(s_id,p_id)
+      print 's_id:%s, p_id:%s; proc_model:%s' % (s_id,p_id,pm)
+      proc_t = num_itres* datasize*pcomp*1000* pm # in (ms)
+      #
+      stage_t = self.p_dur[s_id,p_id] #self.a[2,s_id] # in (ms)
+      #
+      trans_t = tx_t + proc_t + stage_t
+      return [tx_t, proc_t, stage_t, trans_t]
     
     def R_hard(self, s_id):
       '''
       total_trans_time = max{ trans_time over each par_walk}
       '''
-      s_req_dict = self.sessions_beingserved_dict[s_id]['req_dict']
-      return self.trans_time_model(s_id = s_id,
-                                   s_pl = s_req_dict['parism_level'],
-                                   s_ds = s_req_dict['data_size'],
-                                   s_pc = s_req_dict['proc_comp'],
-                                   s_st = s_req_dict['slack_metric'],
-                                   ps_list = s_req_dict['par_share'])
+      #return max(self.sp_trans[s_id,:])
+      s_pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+      if s_pl == 1: #again workaround to scalar cvxpy object mess
+        return self.sp_trans[s_id,0]
+      #
+      p_transt_vector = parameter(s_pl,1, name='p_transt_vector')
+      for p_id in range(0,s_pl):
+        p_transt_vector[p_id,0] = self.sp_trans[s_id,p_id]  #+ path_latency
       
+      return max(p_transt_vector) #s_transt
+    
     def R_soft(self, s_id):
-      n = self.a[3,s_id]
+      n = self.a[3,s_id] #quad_over_lin(self.a[3,s_id], 1) #square(self.a[3,s_id])
       return n*self.n_grain
 
     # modeling penalty and utility functions
@@ -756,22 +852,45 @@ class SchingOptimizer:
       pylab.grid()
       pylab.show()
       """
-    #self.a[3, s_id].value
-    #self.func_compconstant_dict
-    #self.sessions_beingserved_dict[s_id]['req_dict']['proc_comp']
-    #self.sessions_beingserved_dict[s_id]['req_dict']['func_list']
+    
+    def it_time__basedon_itwalkinfo_dict(self, itwalkinfo_dict):
+      dict_ = {}
+      for p_id,pinfo_dict in itwalkinfo_dict.items():
+        p_ttime = 0
+        #
+        p_ds = pinfo_dict['p_info']['datasize']
+        itbundle_dict = pinfo_dict['itbundle']
+        for itres,job in itbundle_dict.items():
+          #staging time
+          try:
+            p_ttime += job['dur']
+          except KeyError:
+            pass
+          #procing time
+          try:
+            p_c = job['comp'] #pinfo_dict['p_info']['totalcomp']
+            p_proc = job['proc']
+            p_ttime += p_ds*p_c* 1000/p_proc #in (ms)
+          except KeyError:
+            pass
+        #
+        dict_[p_id] = p_ttime
+      return dict_
+    
     def get_session_itwalkbundle_dict__walk(self, s_id):
+      s_req_dict = self.sessions_beingserved_dict[s_id]['req_dict']
+      n = (self.a[3, s_id].value)**2
+      s_pc = s_req_dict['proc_comp']
+      tc = float(s_pc*n) #s_it_executable_totalcomp
+      #
       def get_func_itexectablecomp_map(s_id):
         """
         Returns which function is executed over what percentage of data based on
-        the allocated 'n'.
+        the allocated 'n**2'.
         """
-        n = self.a[3, s_id].value
-        s_req_dict = self.sessions_beingserved_dict[s_id]['req_dict']
-        s_pc = s_req_dict['proc_comp']
-        dict_ = {}
         fl = s_req_dict['func_list']
-        m = float(s_pc*n)
+        dict_ = {}
+        m = tc
         for func in fl:
           f_c = self.func_compconstant_dict[func]
           if m < 0:
@@ -785,19 +904,16 @@ class SchingOptimizer:
       #
       def add_itbundleres_itexeccomp(s_id, p_proc, itbundle_dict):
         #updates itbundle to include comp portion the res is responsible
-        n = self.a[3, s_id].value
-        s_pc = self.sessions_beingserved_dict[s_id]['req_dict']['proc_comp']
-        totalcomp = float(s_pc*n) #s_it_executable_totalcomp
         for t_id,t_info in itbundle_dict.items():
           try:
             t_proc = t_info['proc']
           except KeyError: #res may only be there for dur
             continue
-          t_info['comp'] = totalcomp*(t_info['proc']/p_proc)
+          t_info['comp'] = tc*(t_proc/p_proc)
       #
       def add_itbundleres_itfuncdataportion(s_id, f_itcomp_dict, itbundle_dict, orded_itwalkbundle):
         cur_f_id, curf_tag, f_itcomp = -1, None, None
-        s_fl = self.sessions_beingserved_dict[s_id]['req_dict']['func_list']
+        s_fl = s_req_dict['func_list']
         for t_tag in orded_itwalkbundle:
           itbundle_dict[t_tag]['itfunc_dict'] = {}
           ttag_itfunc_dict = itbundle_dict[t_tag]['itfunc_dict']
@@ -860,7 +976,12 @@ class SchingOptimizer:
       '''
       dict_, p_walk = {}, {}
       s_ps_info = self.sid_res_dict[s_id]['ps_info']
-      for p_id, p_info_dict in s_ps_info.items():
+      s_ds = s_req_dict['data_size']
+      s_ps = s_req_dict['par_share']
+      #print 's_ps:', s_ps
+      s_pl = s_req_dict['parism_level']
+      for p_id in range(0, s_pl):
+        p_info_dict = s_ps_info[p_id]
         dict_[p_id] = {'itbundle':{}, 'p_info':{}}
         p_itbundle_dict = dict_[p_id]['itbundle']
         p_proc, p_dur = 0, 0
@@ -886,6 +1007,8 @@ class SchingOptimizer:
               p_itbundle_dict[it_tag] = {'dur': it_dur}
         dict_[p_id]['p_info']['p_proc'] = p_proc
         dict_[p_id]['p_info']['p_dur'] = p_dur
+        dict_[p_id]['p_info']['datasize'] = float(s_ds)*float(s_ps[p_id])
+        dict_[p_id]['p_info']['totalcomp'] = tc
         add_itbundleres_itexeccomp(s_id, p_proc = p_proc,
                                    itbundle_dict = p_itbundle_dict)
         f_itcomp_dict = get_func_itexectablecomp_map(s_id)
@@ -898,7 +1021,7 @@ class SchingOptimizer:
         itwalkbundle = [t for t in p_itbundle_dict]
         [p_walk[p_id], orded_itwalkbundle] = \
           itwalkbundle_to_walk__ordereditwalkbundle(p_info_dict['path'], 
-                                                    itwalkbundle = [t for t in p_itbundle_dict])
+                                                    itwalkbundle = itwalkbundle)
         #
         add_itbundleres_itfuncdataportion(s_id, f_itcomp_dict,
                                           itbundle_dict = p_itbundle_dict,
@@ -916,8 +1039,9 @@ class SchingOptimizer:
       safe_p = 0.02 #safety margin for feasibility purposes
       for s_id in range(0, self.N):
         s_req_dict = self.sessions_beingserved_dict[s_id]['req_dict']
-        p_bw = [p_info['fair_bw'] for k,p_info in self.sid_res_dict[s_id]['ps_info'].items()]
-        print '---> s_id:%i' % s_id
+        s_pl = s_req_dict['parism_level']
+        p_bw = [self.sid_res_dict[s_id]['ps_info'][p_id]['fair_bw'] for p_id in range(0,s_pl)]
+        #print '---> s_id:%i' % s_id
         trans_t = self.trans_time_calc(s_pl = s_req_dict['parism_level'],
                                        s_ds = s_req_dict['data_size'],
                                        s_pc = s_req_dict['proc_comp'],
@@ -995,7 +1119,7 @@ class SchingOptimizer:
           link_tuple = (res.pre, res.post)
           link_counter = 0
           #Every session is counted as num_available_paths user for the resource
-          for s_id in self.sid_res_dict:
+          for s_id in range(0,self.N):
             s_pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
             for p_id in range(0, s_pl):
               p_info_dict = self.sid_res_dict[s_id]['ps_info'][p_id]
@@ -1023,9 +1147,11 @@ class SchingOptimizer:
       #(Currently) fair_bw of a session: Sum of fair_bw share from each session path
       #TODO: If there is supposed to be superority of a particular session over 
       #the bw, fair_bw of each session can be set to accordingly
-      for s_id in self.sid_res_dict:
+      for s_id in range(0,self.N):
         s_fair_bw = 0
-        for p_id, path_info_dict in self.sid_res_dict[s_id]['ps_info'].items():
+        s_pl = self.sessions_beingserved_dict[s_id]['req_dict']['parism_level']
+        for p_id in range(0, s_pl):
+          path_info_dict = self.sid_res_dict[s_id]['ps_info'][p_id]
           p_fair_bw = give_fair_bw_share(path_info_dict['net_edge_list'])
           path_info_dict.update({'fair_bw': p_fair_bw})
           s_fair_bw += p_fair_bw

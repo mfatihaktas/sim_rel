@@ -1,6 +1,5 @@
 import SocketServer as SS
-import sys,socket,json
-import threading, pprint
+import sys,json,logging,threading,pprint,getopt
 
 class ThreadedUDPServer(SS.ThreadingMixIn, SS.UDPServer):
   pass
@@ -11,63 +10,75 @@ class ThreadedUDPRequestHandler_SESSION(SS.BaseRequestHandler):
     sockname_tuple = socket.getsockname()
     data = self.request[0].strip()
     cur_thread = threading.current_thread()
-    print "\nSocket listening on addr:{} and port:{} is speaking:".format(sockname_tuple[0], sockname_tuple[1])
-    print "session_cur_thread {} -> {} wrote:".format(cur_thread.name, self.client_address)
-    print data
-    '''
-    socket = self.request[1]
-    server = self.server
-    session_tp = str(server.server_address[1])
-    print 'session_tp: ', session_tp
-    try:
-      session_info = session_info_dict[session_tp]
-    except (KeyError):
-      print 'No job match for ', server.server_address
-      pass
-    # process with corresponding in-transit function
-    data = it_func_dict[session_info['job']](data)
-    socket.sendto(data, (session_info['consumer_ip'], int(session_tp)))
-    '''
+    #
+    addr_port = sockname_tuple[0]+'.'+sockname_tuple[1]
+    logging.info('%s, consumer recved over addr.port=%s, data_size=%s',cur_thread.name,addr_port,sys.getsizeof(data))
+    #print data
+
 class Consumer(object):
-  def __init__(self, c_addr, c_lport_list):
-    self.c_addr = c_addr
-    self.c_lport_list = c_lport_list
-    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    self.session_server_list = []
-    
-  def print_consumer(self):
-    print '-------HHH---------'
-    print 'c_addr: ', self.c_addr
-    print 'c_lport_list: ', self.c_lport_list
-    print '-------OOO---------'
-    
-  def create_session_servers(self):
-    for i,lport in enumerate(self.c_lport_list):
-      print "ThreadedUDPServer started for session_lport:{} ...".format(lport)
-      self.session_server_list.append(
-        ThreadedUDPServer((self.c_addr, lport), ThreadedUDPRequestHandler_SESSION)
-      )  
-      session_server_thread = threading.Thread(target=self.session_server_list[i].serve_forever)
-      session_server_thread.daemon = True
-      session_server_thread.start()
-      #
+  def __init__(self, laddr, lport_list):
+    self.laddr = laddr
+    self.lport_list = lport_list
+    self.s_server_list = []
+  
+  def log_consumer(self):
+    logging.info('-------')
+    logging.info('laddr=%s',self.laddr)
+    logging.info('lport_list=%s',json.dumps(self.lport_list))
+    logging.info('-------')
+  
+  def init_sservers(self):
+    for i,lport in enumerate(self.lport_list):
+      self.s_server_list.append(
+        ThreadedUDPServer((self.laddr, lport), ThreadedUDPRequestHandler_SESSION)
+      )
+      s_server_thread = threading.Thread(target=self.s_server_list[i].serve_forever)
+      s_server_thread.daemon = True
+      s_server_thread.start()
+      logging.info('ThreadedUDPServer started for lport=%s', lport)
+  
+  def shutdown_sservers(self):
+    for i,lport in enumerate(self.lport_list):
+      self.s_server_list[i].shutdown()
+      logging.info('s_server with lport=%s is shutdown', lport)
+  
   def test(self):
-    #self.print_consumer()
-    self.create_session_servers()
-    
-def main():
-  if len(sys.argv) < 3:
-    raise RuntimeError('argv = [c_addr, c_lport0, c_lport1, ... ]')
-  c_addr = sys.argv[1]
-  c_lport_list = []
-  for i in range(2, len(sys.argv)):
-    c_lport_list.append( int(sys.argv[i]) )
+    self.log_consumer()
+    self.init_sservers()
+  
+def main(argv):
+  laddr = logto = lports = None
+  lport_list = []
+  try:
+    opts, args = getopt.getopt(argv,'',['laddr=','logto=', 'lports='])
+  except getopt.GetoptError:
+    print 'transit.py --laddr=<>  --logto=<> --lports=lport1,lport2, ...'
+    sys.exit(2)
+  #Initializing global variables with comman line options
+  for opt, arg in opts:
+    if opt == '--laddr':
+       laddr = arg
+    elif opt == '--logto':
+       logto = arg
+    elif opt == '--lports':
+       lports = arg
   #
-  c = Consumer(c_addr, c_lport_list)
+  for lport in lports.split(','):
+    lport_list.append(int(lport))
+  #where to log, console or file
+  if logto == 'file':
+    logging.basicConfig(filename='c.log',level=logging.DEBUG)
+  elif logto == 'console':
+    logging.basicConfig(level=logging.DEBUG)
+  else:
+    raise CommandLineOptionError('Unexpected logto', logto)
+  #
+  c = Consumer(laddr, lport_list)
   c.test()
   #
   raw_input('Enter')
-
+  c.shutdown_sservers()
+  
 if __name__ == "__main__":
-  main()
+  main(sys.argv[1:])
   

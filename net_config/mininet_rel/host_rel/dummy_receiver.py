@@ -3,32 +3,51 @@
 import SocketServer as SS
 import sys,socket,json,getopt,threading,commands
 import pprint
-
+#########################  UDP Server-Handler  ###########################
 class ThreadedUDPServer(SS.ThreadingMixIn, SS.UDPServer):
   pass
 
-class ThreadedUDPRequestHandler_SESSION(SS.BaseRequestHandler):
+class ThreadedUDPRequestHandler(SS.BaseRequestHandler):
   def handle(self):
-    #socket = self.request[1]
-    #sockname_tuple = socket.getsockname()
     data = self.request[0].strip()
     cur_thread = threading.current_thread()
-    print "\ndummy_recver rxed cur_thread={}, data=\n{}".format(cur_thread.name, data)
+    print 'cur_thread={}; dummyrecver_udp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), data)
+    sock = self.request[1]
+    response = 'ok'
+    sock.sendto(response, self.client_address)
+    print 'response=%s is sent back to client.' % response
+  
+#########################  TCP Server-Handler  ###########################
+class ThreadedTCPServer(SS.ThreadingMixIn, SS.TCPServer):
+  pass
 
+class ThreadedTCPRequestHandler(SS.BaseRequestHandler):
+  def handle(self):
+    data = self.request.recv(1024*10)
+    cur_thread = threading.current_thread()
+    print 'cur_thread={}; dummyrecver_tcp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), data)
+    response = 'ok'
+    self.request.sendall(response)
+    print 'response=%s is sent back to client.' % response
+  
+##########################################################################
 class DummyReceiver(object):
-  def __init__(self, laddr, lport):
+  def __init__(self, laddr, lport, proto):
     self.laddr = laddr
     self.lport = lport
-    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    self.server = ThreadedUDPServer((self.laddr, lport), ThreadedUDPRequestHandler_SESSION)
+    self.proto = proto
+    if self.proto == 'tcp':
+      self.server = ThreadedTCPServer((self.laddr, lport), ThreadedTCPRequestHandler)
+    elif self.proto == 'udp':
+      self.server = ThreadedUDPServer((self.laddr, lport), ThreadedUDPRequestHandler)
     server_thread = threading.Thread(target=self.server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    print 'dummy_recver is started on laddr={}, lport={}'.format(laddr, lport)
+    print 'dummy_recver_{} is started on laddr={}, lport={}'.format(self.proto, laddr, lport)
   
-  def shutdown_recver(self):
+  def shutdown(self):
     self.server.shutdown()
-    print 'dummy_recver is shutdown.'
+    print 'dummy_recver_%s is shutdown.' % self.proto
   
 def get_laddr(lintf):
   # search and bind to eth0 ip address
@@ -42,11 +61,11 @@ def get_laddr(lintf):
   return intf_eth0_ip
 
 def main(argv):
-  lport = lintf = None
+  lport = lintf = proto = None
   try:
-    opts, args = getopt.getopt(argv,'',['lport=','lintf='])
+    opts, args = getopt.getopt(argv,'',['lport=','lintf=','proto='])
   except getopt.GetoptError:
-    print 'transit.py --lport=<> --lintf=<>'
+    print 'dummy_receiver.py --lport=<> --lintf=<> --proto=tcp/udp'
     sys.exit(2)
   #Initializing variables with comman line options
   for opt, arg in opts:
@@ -54,12 +73,14 @@ def main(argv):
        lport = int(arg)
     elif opt == '--lintf':
        lintf = arg
+    elif opt == '--proto':
+       proto = arg
   #
   laddr = get_laddr(lintf)
-  dr = DummyReceiver(laddr, lport)
+  dr = DummyReceiver(laddr, lport, proto)
   #
   raw_input('Enter')
-  dr.shutdown_recver()
+  dr.shutdown()
   
 if __name__ == "__main__":
   main(sys.argv[1:])

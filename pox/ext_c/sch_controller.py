@@ -84,11 +84,10 @@ class SchController (object):
     for conn in core.openflow.connections:
       if conn.dpid == gw_dpid:
         self.send_udp_packet_out(
-        conn, payload=json.dumps(sch_res),
-        tp_src=info_dict['sching_tp_src'], tp_dst=info_dict['sching_tp_dst'],
-        src_ip=info_dict['scher_virtual_ip'], dst_ip=info_dict['p_ip'],
-        src_mac=info_dict['scher_virtual_mac'], dst_mac=info_dict['p_mac'],
-        )
+          conn, payload=json.dumps(sch_res),
+          tp_src=info_dict['sching_tp_src'], tp_dst=info_dict['sching_tp_dst'],
+          src_ip=info_dict['scher_virtual_ip'], dst_ip=info_dict['p_ip'],
+          src_mac=info_dict['scher_virtual_mac'], dst_mac=info_dict['p_mac'] )
   
   # Method for just sending a UDP packet over any sw port (broadcast by default)
   def send_udp_packet_out(self, conn, payload, tp_src, tp_dst,src_ip, dst_ip, 
