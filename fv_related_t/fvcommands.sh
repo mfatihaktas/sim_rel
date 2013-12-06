@@ -58,7 +58,7 @@ elif [ $1 = 'af' ]
 then
 	#fvctl -f fvpasswd_file add-flowspace allflowspace all 1 any allslice=6 #,myslice2=0
 	fvctl -f fvpasswd_file add-flowspace acterflowspace all 10 any acterslice=7 #,myslice2=0, tp_dst=6000
-	fvctl -f fvpasswd_file add-flowspace scherflowspace all 10 tp_dst=7000 scherslice=7 #,myslice2=0
+	fvctl -f fvpasswd_file add-flowspace scherflowspace all 20 tp_dst=7000 scherslice=7 #,myslice2=0
 	fvctl -f fvpasswd_file add-flowspace arpflowspace all 100 dl_type=0x806 arpslice=7 #,myslice2=0
 else
 	echo "Argument did not match !"

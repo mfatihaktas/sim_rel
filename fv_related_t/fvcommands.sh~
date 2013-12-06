@@ -50,7 +50,7 @@ then
 	fvctl -f fvpasswd_file add-slice --password=1 arpslice tcp:192.168.56.1:9111 mfa
 elif [ $1 = 'rs' ]
 then
-	fvctl -f fvpasswd_file remove-slice allslice
+	#fvctl -f fvpasswd_file remove-slice allslice
 	fvctl -f fvpasswd_file remove-slice acterslice
 	fvctl -f fvpasswd_file remove-slice scherslice
 	fvctl -f fvpasswd_file remove-slice arpslice

@@ -145,7 +145,7 @@ class ARPResponder (object):
     print "Connection %s" % (event.connection)
     if _install_flow:
       fm = of.ofp_flow_mod()
-      fm.priority = 0x1000 # Pretty high
+      fm.priority = 1000 # Pretty high
       fm.match.dl_type = ethernet.ARP_TYPE
       fm.match.dl_dst = EthAddr("FF:FF:FF:FF:FF:FF")
       fm.idle_timeout = 0 #100
@@ -165,7 +165,9 @@ class ARPResponder (object):
     
   def _handle_PacketIn (self, event):
     packet = event.parsed
-    print "Rxed packet: ", packet, "from sw_dpid: ", dpidToStr(event.connection.dpid)
+    print "Rxed packet: ", packet
+    print "from sw_dpid: ", dpidToStr(event.connection.dpid)
+    print "inport: ", event.port
     #self.send_stat_req(event)
 
     # Note: arp.hwsrc is not necessarily equal to ethernet.src
@@ -206,10 +208,8 @@ class ARPResponder (object):
 
           if a.opcode == arp.REQUEST:
             # Maybe we can answer
-
             if a.protodst in _arp_table:
               # We have an answer...
-
               r = arp()
               r.hwtype = a.hwtype
               r.prototype = a.prototype
@@ -231,8 +231,8 @@ class ARPResponder (object):
                 str(r.protosrc)))
               msg = of.ofp_packet_out()
               msg.data = e.pack()
-              msg.actions.append(of.ofp_action_output(port =
-                                                      of.OFPP_IN_PORT))
+              msg.actions.append(of.ofp_action_output(port = of.OFPP_IN_PORT))
+                                                      #inport))
               msg.in_port = inport
               event.connection.send(msg)
               return EventHalt if _eat_packets else None
@@ -285,9 +285,11 @@ def launch (timeout=ARP_TIMEOUT, no_flow=False, eat_packets=True,
 
   core.Interactive.variables['arp'] = _arp_table
   #Static ARP entries for avoiding ARP query in network with loops
+  _arp_table[IPAddr("10.0.0.255")] = Entry("00:00:00:00:00:00", static=True) #for dts
   _arp_table[IPAddr("10.0.0.1")] = Entry("00:00:00:01:00:01", static=True) #for p
   _arp_table[IPAddr("10.0.0.2")] = Entry("00:00:00:01:00:02", static=True) #for c
   
+  _arp_table[IPAddr("10.0.0.111")] = Entry("00:00:00:00:11:01", static=True) #for d
   _arp_table[IPAddr("10.0.0.11")] = Entry("00:00:00:00:01:01", static=True) #for t11
   _arp_table[IPAddr("10.0.0.12")] = Entry("00:00:00:00:01:02", static=True) #for t12
   _arp_table[IPAddr("10.0.0.13")] = Entry("00:00:00:00:01:03", static=True) #for t13

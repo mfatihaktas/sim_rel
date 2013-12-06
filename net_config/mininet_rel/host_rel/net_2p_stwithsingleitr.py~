@@ -22,6 +22,8 @@ class MyTopo( Topo ):
     # Add hosts and switches
     p = self.addHost( 'p' )
     c = self.addHost( 'c' )
+    #dummy node
+    d = self.addHost( 'd' )
     t11 = self.addHost( 't11' )
     t21 = self.addHost( 't21' )
     t31 = self.addHost( 't31' )
@@ -32,8 +34,8 @@ class MyTopo( Topo ):
     s11 = self.addSwitch( 's11' )
     s12 = self.addSwitch( 's12' )
     #link opts
-    local_linkopts = dict(bw=10, delay='5ms', loss=0, max_queue_size=1000, use_htb=True)
-    wide_linkopts = dict(bw=10, delay='50ms', loss=0, max_queue_size=1000, use_htb=True)
+    local_linkopts = dict(bw=1, delay='5ms', loss=0, max_queue_size=1000, use_htb=True)
+    wide_linkopts = dict(bw=1, delay='50ms', loss=0, max_queue_size=1000, use_htb=True)
     dsa_linkopts = dict(bw=1000, delay='1ms', loss=0, max_queue_size=10000, use_htb=True)
     # Add links
     self.addLink( p,s11, **wide_linkopts )
@@ -49,7 +51,9 @@ class MyTopo( Topo ):
     self.addLink( s2,t21, **dsa_linkopts )
     #for DSA 3
     self.addLink( s3,t31, **dsa_linkopts )
-
+    #dummy link
+    self.addLink( d,s11, **local_linkopts )
+  
 def run_tnodes(hosts):
   #Start
   """
@@ -97,16 +101,22 @@ if __name__ == '__main__':
   t11.setMAC(mac='00:00:00:00:01:01')
   t21.setMAC(mac='00:00:00:00:02:01')
   t31.setMAC(mac='00:00:00:00:03:01')
+  
   #To fix "network is unreachable"
   p.setDefaultRoute(intf='p-eth0')
   c.setDefaultRoute(intf='c-eth0')
   t11.setDefaultRoute(intf='t11-eth0')
   t21.setDefaultRoute(intf='t21-eth0')
   t31.setDefaultRoute(intf='t31-eth0')
+  #dummy node conf
+  d = net.getNodeByName('d')
+  d.setIP(ip='10.0.0.111', prefixLen=32)
+  d.setMAC(mac='00:00:00:00:11:01')
+  d.setDefaultRoute(intf='d-eth0')
   #
   net.start()
   #
-  run_tnodes([t11, t21, t31])
+  #run_tnodes([t11, t21, t31])
   #
   CLI( net )
   net.stop()

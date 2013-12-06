@@ -41,7 +41,7 @@ class UnknownClientError(TransitNodeOpError):
   '''
   pass
 
-class NoItruleMatch(TransitNodeOpError):
+class NoItruleMatchError(TransitNodeOpError):
   '''
   Exception raised when data exchanged between Scher and Acter is corrupt.
   e.g. KeyError while getting 'type' or 'data'
