@@ -5,37 +5,60 @@ import sys,socket,json,getopt,threading,commands
 import pprint
 #########################  UDP Server-Handler  ###########################
 class ThreadedUDPServer(SS.ThreadingMixIn, SS.UDPServer):
-  pass
+  def __init__(self, f_obj, server_address, RequestHandlerClass):
+    SocketServer.UDPServer.__init__(self, server_address, RequestHandlerClass)
+    self.f_obj = f_obj
 
 class ThreadedUDPRequestHandler(SS.BaseRequestHandler):
   def handle(self):
     data = self.request[0].strip()
     cur_thread = threading.current_thread()
-    print 'cur_thread={}; dummyrecver_udp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), data)
+    print 'cur_thread={}; dummyrecver_udp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), '...')
+    s = self.server
+    fo = s.f_obj
+    if fo != None:
+      fo.write(data)
+    """
     sock = self.request[1]
     response = 'ok'
-    socket.sendto(response, self.client_address)
+    sock.sendto(response, self.client_address)
     print 'response=%s is sent back to client.' % response
+    """
   
 #########################  TCP Server-Handler  ###########################
 class ThreadedTCPServer(SS.ThreadingMixIn, SS.TCPServer):
-  pass
-
+  def __init__(self, f_obj, server_address, RequestHandlerClass):
+    SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
+    self.f_obj = f_obj
+  
 class ThreadedTCPRequestHandler(SS.BaseRequestHandler):
   def handle(self):
     data = self.request.recv(1024*10)
     cur_thread = threading.current_thread()
-    print 'cur_thread={}; dummyrecver_tcp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), data)
+    print 'cur_thread={}; dummyrecver_tcp rxed \ndatasize={} \ndata={}'.format(cur_thread.name, sys.getsizeof(data), '...')
+    s = self.server
+    fo = s.f_obj
+    if fo != None:
+      fo.write(data)
+    """
     response = 'ok'
     self.request.sendall(response)
     print 'response=%s is sent back to client.' % response
+    """
   
 ##########################################################################
 class DummyReceiver(object):
-  def __init__(self, laddr, lport, proto):
+  def __init__(self, laddr, lport, proto, rx_type):
     self.laddr = laddr
     self.lport = lport
     self.proto = proto
+    #
+    self.rx_type = rx_type
+    if rx_type == 'file':
+      self.wf = open('rxed_data.dat', 'w')
+    elif rx_type == 'dummy':
+      self.wf = None
+    #
     if self.proto == 'tcp':
       self.server = ThreadedTCPServer((self.laddr, lport), ThreadedTCPRequestHandler)
     elif self.proto == 'udp':
@@ -43,11 +66,11 @@ class DummyReceiver(object):
     server_thread = threading.Thread(target=self.server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    print 'dummy_recver_{} is started on laddr={}, lport={}'.format(self.proto, laddr, lport)
+    print '{}_recver_{} is started on laddr={}, lport={}'.format(self.rx_type, self.proto, laddr, lport)
   
   def shutdown(self):
     self.server.shutdown()
-    print 'dummy_recver_%s is shutdown.' % self.proto
+    print '%s_recver_%s is shutdown.' % (self.rx_type, self.proto)
   
 def get_laddr(lintf):
   # search and bind to eth0 ip address
@@ -61,11 +84,11 @@ def get_laddr(lintf):
   return intf_eth0_ip
 
 def main(argv):
-  lport = lintf = proto = None
+  lport = lintf = proto = rx_type = None
   try:
-    opts, args = getopt.getopt(argv,'',['lport=','lintf=','proto='])
+    opts, args = getopt.getopt(argv,'',['lport=','lintf=','proto=','rx_type='])
   except getopt.GetoptError:
-    print 'dummy_receiver.py --lport=<> --lintf=<> --proto=tcp/udp'
+    print 'dummy_receiver.py --lport=<> --lintf=<> --proto=tcp/udp --rx_type=file/dummy'
     sys.exit(2)
   #Initializing variables with comman line options
   for opt, arg in opts:
@@ -74,10 +97,23 @@ def main(argv):
     elif opt == '--lintf':
        lintf = arg
     elif opt == '--proto':
-       proto = arg
+      if proto == 'tcp' or proto == 'udp':
+        proto = arg
+      else:
+        print 'unknown proto=%s', arg
+        sys.exit(2)
+    elif opt == '--rx_type':
+      if rx_type == 'file' or rx_type == 'dummy':
+        rx_type = arg
+      else:
+        print 'unknown rx_type=%s', arg
+        sys.exit(2)
   #
   laddr = get_laddr(lintf)
-  dr = DummyReceiver(laddr, lport, proto)
+  dr = DummyReceiver(laddr = laddr,
+                     lport = lport,
+                     proto = proto,
+                     rx_type = rx_type )
   #
   raw_input('Enter')
   dr.shutdown()

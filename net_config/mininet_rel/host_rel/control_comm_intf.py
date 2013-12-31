@@ -39,7 +39,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     s = self.server
     if self.client_address[0] != s.client_address[0]:
       logging.info('Unexpected client_ip=%s', self.client_address[0])
-      raise UnexpectedClientError('Unexpected client', self.client_address[0])
+      raise UnknownClientError('Unexpected client', self.client_address[0])
     #
     msg = self.request.recv(10*1024)
     cur_thread = threading.current_thread()

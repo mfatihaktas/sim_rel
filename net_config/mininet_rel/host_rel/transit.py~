@@ -253,7 +253,7 @@ def main(argv):
       logto = arg
   #where to log, console or file
   if logto == 'file':
-    fname = nodename+'.log'
+    fname = 'logs/'+nodename+'.log'
     logging.basicConfig(filename=fname,filemode='w',level=logging.DEBUG)
   elif logto == 'console':
     logging.basicConfig(level=logging.DEBUG)

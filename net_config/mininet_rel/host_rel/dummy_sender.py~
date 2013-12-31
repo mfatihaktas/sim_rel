@@ -1,13 +1,14 @@
 #!/usr/bin/python
-import sys,socket,json,getopt,struct
-import pprint
+import sys,socket,json,getopt,struct,time,errno
+#import pprint
 import numpy as np
-class DummySender(object):
-  def __init__(self, dst_ip, dst_lport, proto, datasize):
+class Sender(object):
+  def __init__(self, dst_ip, dst_lport, proto, datasize, tx_type):
     self.dst_ip = dst_ip
     self.dst_lport = dst_lport
     self.proto = proto
     self.datasize = datasize
+    self.tx_type = tx_type
     self.sock = None
     #
     if self.proto == 'tcp':
@@ -19,45 +20,71 @@ class DummySender(object):
       print 'Unknown proto=%s.', self.proto
       sys.exit(2)
   
+  def file_send(self, file_url):
+    time_s = time.time()
+    f=open (file_url, "r") 
+    l = f.read(1024)
+    while (l):
+      self.sock.send(l)
+      l = f.read(1024)
+    tx_dur = time.time() - time_s
+    print 'file_over_%s is sent; size=%s, dur=%s' % (self.proto,'?',tx_dur)
+    return tx_dur
+  
   def dummy_send(self, data):
+    time_s = time.time()
     if self.proto == 'tcp':
-      self.sock.sendall(data)
+      try:
+        self.sock.sendall(data)
+      except socket.error, e:
+        if isinstance(e.args, tuple):
+          print "errno is %d" % e[0]
+          if e[0] == errno.EPIPE:
+            # remote peer disconnected
+            print "Detected remote disconnect"
+          else:
+            # determine and handle different error
+            pass
+        else:
+          print "socket error ", e
     elif self.proto == 'udp':
       self.sock.sendto(data, (self.dst_ip, self.dst_lport))
     #
-    print 'proto:{}, sentto ip:{}, port:{}\ndata:{}'.format(self.proto, self.dst_ip, self.dst_lport, data)
+    tx_dur = time.time() - time_s
+    print 'dummy_over_%s is sent, to ip=%s, port=%s' % (self.proto, self.dst_ip, self.dst_lport)
+    print 'datasize=%sb, dur=%ssec' % (8*sys.getsizeof(data), tx_dur)
+    #print 'data=%s' % data
+    return tx_dur
+  
+  def init_send(self):
+    if self.tx_type == 'dummy':
+      n = int(float(float(self.datasize)*1024/8/8))-5
+      data = self.numpy_random(n)
+      packer = struct.Struct('%sd' % n)
+      data_str = packer.pack(*data)
+      dur = 0
+      for i in range(0, 10):
+        print 'i=%s' % i
+        dur += self.dummy_send(data_str)
+      print 'dur=%s' % dur
+    elif self.tx_type == 'file':
+      self.file_send('tx.data')
   
   def numpy_random(self, n):
-      '''
-      Return a list/tuple of n random floats in the range [0, 1).
-      float_size = 8Bs
-      total size of generated random data_list = 8*n+72 Bs
-      '''
-      return tuple(np.random.random((n)) )
+    '''
+    Return a list/tuple of n random floats in the range [0, 1).
+    float_size = 8Bs
+    total size of generated random data_list = 8*n+72 Bs
+    '''
+    return tuple(np.random.random((n)) )
    
   def numpy_randint(self, a, b, n):
-      '''Return a list of n random ints in the range [a, b].'''
-      return np.random.randint(a, b, n).tolist()
+    '''Return a list of n random ints in the range [a, b].'''
+    return np.random.randint(a, b, n).tolist()
   
   def test(self):
+    print 'test'
     if self.dst_lport == 7001: #send sching msgs
-      """
-      data_json = {'type': 'sp_sching_reply',
-                   'data': 'OK'}
-      """
-      """
-      data_json = {'type': 'sp_sching_reply',
-                   'data': 'OK'}
-      """
-      """
-      data_json = {'type': 'itjob_rule',
-                   'data': {'comp': 2.83333333313,
-                            'data_to_ip': '10.0.0.1',
-                            'itfunc_dict': {'f2': 2.83333333313},
-                            'proc': 288.935318788,
-                            's_tp': 6000,
-                            'datasize': 0.5} }
-      """
       #sching_res for num_session=0
       data_json = {'type': 'itjob_rule',
                    'data': {'comp': 1.99999998665,
@@ -72,32 +99,14 @@ class DummySender(object):
                    'data': 'OK'}
       self.dummy_send(data_json)
     else: #send random_session_data
-      n = int(float(float(self.datasize)*1024/8/8))-4
-      data = self.numpy_random(n)
-      #print 'random_data=', data
-      #print 'random_data_size=%sBs' % (sys.getsizeof(data))
-      #data_str = ''.join(str(e) for e in data)
-      #data_str = json.dumps(data)
-      #data_str = struct.pack('%sd' % 3, 1.0, 2.0, 3.0)
-      packer = struct.Struct('%sd' % n)
-      data_str = packer.pack(*data)
-      #print 'data_str=\n%s' % data_str
-      print 'data_str_size=%sbs' % (8*sys.getsizeof(data_str))
-      #self.dummy_send(data_str)
-      """
-      dummy_data = ''
-      for i in range(0, 100):
-        dummy_data += '1'
-      self.dummy_send(dummy_data)
-      print 'dummy_data_size=%sBs' % (sys.getsizeof(dummy_data))
-      """
+      self.init_send()
   
 def main(argv):
-  dst_ip = dst_lport = proto = datasize = None
+  dst_ip = dst_lport = proto = datasize = tx_type = None
   try:
-    opts, args = getopt.getopt(argv,'',['dst_ip=','dst_lport=','proto=','datasize='])
+    opts, args = getopt.getopt(argv,'',['dst_ip=','dst_lport=','proto=','datasize=','tx_type='])
   except getopt.GetoptError:
-    print 'dummy_sender.py --dst_ip=<> --dst_lport=<> --proto=tcp/udp --datasize=Mb'
+    print 'sender.py --dst_ip=<> --dst_lport=<> --proto=tcp/udp --datasize=Mb --tx_type=dummy/file'
     sys.exit(2)
   #Initializing variables with comman line options
   for opt, arg in opts:
@@ -106,12 +115,27 @@ def main(argv):
     elif opt == '--dst_lport':
       dst_lport = int(arg)
     elif opt == '--proto':
-      proto = arg
+      if arg == 'tcp' or arg == 'udp':
+        proto = arg
+      else:
+        print 'unknown proto=%s' % arg
+        sys.exit(2)
     elif opt == '--datasize':
       datasize = int(arg)
+    elif opt == '--tx_type':
+      if arg == 'file' or arg == 'dummy':
+        tx_type = arg
+      else:
+        print 'unknown rx_type=%s' % arg
+        sys.exit(2)
   #
   #print 'dst_ip=%s, dst_lport=%s, proto=%s, datasize=%s' % (dst_ip, dst_lport, proto, datasize)
-  ds = DummySender(dst_ip, dst_lport, proto, datasize)
+  dst_ip, dst_lport, proto, datasize
+  ds = Sender(dst_ip = dst_ip,
+              dst_lport = dst_lport,
+              proto = proto,
+              datasize = datasize
+              tx_type = tx_type )
   ds.test()
   #
   raw_input('Enter')

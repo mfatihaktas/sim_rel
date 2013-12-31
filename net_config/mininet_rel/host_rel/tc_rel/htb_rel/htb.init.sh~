@@ -624,7 +624,6 @@ minstop () {
   #first delete all filters
   sudo tc filter del dev $1 parent 1: protocol ip prio 100 u32
   #then delete classes (but root)
-  echo "here we go"
   for classfile in `htb_class_list`; do
     echo "classfile="$classfile
     htb_load_class $classfile
@@ -772,7 +771,8 @@ if [ "$1" != "compile" -a "$2" != "nocache" -a -z "$HTB_DEBUG" ]; then
 	exec /bin/sh $HTB_CACHE 2> /dev/null
 fi
 
-
+ROOTID=5
+echo  "ROOTID=5"
 ### Setup root qdisc on all configured devices
   DEVICES=`htb_device_list`
   [ -z "$DEVICES" ] && htb_failure "no configured devices found!"
@@ -788,7 +788,7 @@ if [ $5 = "add_root" ]; then
 	  htb_device_off $dev
 
 	  ### Setup root qdisc for the device
-	  tc qdisc add dev $dev root handle 1 htb \
+	  tc qdisc add dev $dev root handle $ROOTID htb \
 	  default ${DEFAULT:-0} ${R2Q:+r2q $R2Q} $DCACHE ||
 		  htb_fail_off "failed to set root qdisc on $dev!"
 
@@ -805,7 +805,7 @@ for classfile in `htb_class_list`; do
   echo "CLASS=" $CLASS
   echo "PARENT=" $PARENT
 	### Create the class
-	tc class add dev $DEVICE parent 1:$PARENT classid 1:$CLASS \
+	tc class add dev $DEVICE parent $ROOTID:$PARENT classid $PARENT:$CLASS \
 	htb rate $RATE ${CEIL:+ceil $CEIL} ${BURST:+burst $BURST} \
 	${PRIO:+prio $PRIO} ${CBURST:+cburst $CBURST} ${MTU:+mtu $MTU} ||
 		htb_fail_off "failed to add class $CLASS with parent $PARENT on $DEVICE!"
@@ -819,9 +819,8 @@ for classfile in `htb_class_list`; do
 		else
 			htb_fail_off "unknown leaf qdisc ($LEAF) in $classfile!"
 		fi
-
 		tc qdisc add dev $DEVICE \
-		parent 1:$CLASS handle $CLASS $LEAF $LEAFPARM ||
+		parent $ROOTID:$CLASS handle $CLASS $LEAF $LEAFPARM ||
 			htb_fail_off "failed to add leaf qdisc to class $CLASS on $DEVICE!"
 	fi
 
@@ -829,8 +828,8 @@ for classfile in `htb_class_list`; do
 	### Create fw filter for MARK fields
 	for mark in `htb_cfile_rules MARK`; do
 		### Attach fw filter to root class
-		tc filter add dev $DEVICE parent 1:0 protocol ip \
-		prio $PRIO_MARK handle $mark fw classid 1:$CLASS
+		tc filter add dev $DEVICE parent $ROOTID:0 protocol ip \
+		prio $PRIO_MARK handle $mark fw classid $ROOTID:$CLASS
 	done ### mark
 
 	### Create route filter for REALM fields
@@ -843,9 +842,9 @@ for classfile in `htb_class_list`; do
 		SREALM=${SREALM#\*}; DREALM=${DREALM#\*}
 
 		### Attach route filter to the root class
-		tc filter add dev $DEVICE parent 1:0 protocol ip \
+		tc filter add dev $DEVICE parent $ROOTID:0 protocol ip \
 		prio $PRIO_REALM route ${SREALM:+from $SREALM} \
-		${DREALM:+to $DREALM} classid 1:$CLASS
+		${DREALM:+to $DREALM} classid $ROOTID:$CLASS
 	done ### realm
 
 	### Create u32 filter for RULE fields
@@ -887,8 +886,8 @@ for classfile in `htb_class_list`; do
 		#echo "$rule: $u32_s $u32_d"
 
 		### Attach u32 filter to the appropriate class
-		tc filter add dev $DEVICE parent 1:0 protocol ip \
-		prio $PRIO_RULE u32 $u32_s $u32_d classid 1:$CLASS
+		tc filter add dev $DEVICE parent $ROOTID:0 protocol ip \
+		prio $PRIO_RULE u32 $u32_s $u32_d classid $ROOTID:$CLASS
 	done ### rule
 
 	[ "$1" = "compile" ] && echo

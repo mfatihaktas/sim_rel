@@ -1,9 +1,0 @@
-#Configuration files for this scenario:
-# ---------------------------------------------------------------------------
-# dev		     dev-2.root	  dev-2:10.6000	dev-2:20.6001	  dev-2:30.dfl
-# ----		   -----------	-------------	--------------	-------------
-# DEFAULT=0  RATE=5Mbit	  RATE=5Mbit	  RATE=3Mbit	    RATE=1Kbit
-#	        	 BURST=15k	  BURST=15k     BURST=15k       BURST=15k
-                          CEIL=5Mbit	  CEIL=5Mbit      CEIL=5Mbit
-#		                      LEAF=sfq      LEAF=sfq        LEAF=sfq
-#						              RULE=*:80     RULE=*:25

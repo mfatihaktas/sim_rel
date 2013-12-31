@@ -1,0 +1,4 @@
+#!/bin/bash
+make fvrun
+./runfv
+#  run-parts --regex '^r.*sh$' --arg 'sch' ~/git_repo/pox

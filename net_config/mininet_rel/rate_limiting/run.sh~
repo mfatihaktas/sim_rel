@@ -48,8 +48,8 @@ then
   #sudo ovs-ofctl add-flow $SW "in_port=3 ip idle_timeout=0 actions=output:1"
   #sudo ovs-ofctl add-flow $SW "in_port=1 ip idle_timeout=0 actions=output:3"
   
-  #sudo ovs-ofctl add-flow $SW "in_port=1 idle_timeout=0 actions=output:3"
-  #sudo ovs-ofctl add-flow $SW "in_port=3 idle_timeout=0 actions=output:1"
+  sudo ovs-ofctl add-flow $SW "in_port=1 idle_timeout=0 actions=output:3"
+  sudo ovs-ofctl add-flow $SW "in_port=3 idle_timeout=0 actions=output:1"
 elif [ $1  = 'rf' ]
 then
   sudo ovs-ofctl del-flows $SW "ip"

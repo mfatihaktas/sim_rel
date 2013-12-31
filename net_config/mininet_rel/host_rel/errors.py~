@@ -1,8 +1,3 @@
-"""
-def dummy_func():
-  print 'dummy_func is called !'
-"""
-  
 class Error(Exception):
   '''
   Base class for exceptions in the project.
@@ -24,7 +19,17 @@ class CommandLineOptionError(Error):
     self.msg = msg
   def __str__(self):
     return repr(self.msg)
-#######################  ############################# ####################
+#######################
+class CorruptMsgError(Error):
+  '''
+  Exception raised for errors during the intransit operation done by a transit node.
+  '''
+  def __init__(self, msg, data):
+    self.data = data
+    self.msg = msg
+  def __str__(self):
+    return repr(self.msg)
+#######################
 class TransitNodeOpError(Error):
   '''
   Exception raised for errors during the intransit operation done by a transit node.
@@ -41,12 +46,12 @@ class UnknownClientError(TransitNodeOpError):
   '''
   pass
 
-class NoItruleMatch(TransitNodeOpError):
+class NoItruleMatchError(TransitNodeOpError):
   '''
   Exception raised when data exchanged between Scher and Acter is corrupt.
   e.g. KeyError while getting 'type' or 'data'
   '''
   pass
 
-###############################  OOO  ##########################################
+########################
 

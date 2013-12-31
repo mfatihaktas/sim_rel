@@ -1,0 +1,44 @@
+# Mon Dec  9 13:09:24 EST 2013
+
+# ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN qlen 1000
+    link/ether b8:88:e3:15:28:48 brd ff:ff:ff:ff:ff:ff
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP qlen 1000
+    link/ether 9c:4e:36:07:c3:d4 brd ff:ff:ff:ff:ff:ff
+
+# tc qdisc del dev lo root
+RTNETLINK answers: No such file or directory
+
+# tc qdisc add dev lo root handle 1 htb default 0
+
+# ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc htb state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN qlen 1000
+    link/ether b8:88:e3:15:28:48 brd ff:ff:ff:ff:ff:ff
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP qlen 1000
+    link/ether 9c:4e:36:07:c3:d4 brd ff:ff:ff:ff:ff:ff
+
+# ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc htb state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN qlen 1000
+    link/ether b8:88:e3:15:28:48 brd ff:ff:ff:ff:ff:ff
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP qlen 1000
+    link/ether 9c:4e:36:07:c3:d4 brd ff:ff:ff:ff:ff:ff
+
+# tc class add dev lo parent 1: classid 1:1 htb rate 5Mbit burst 15k
+
+# tc class add dev lo parent 1:1 classid 1:10 htb rate 10Kbit ceil 20Kbit burst 15k
+
+# tc qdisc add dev lo parent 1:10 handle 10 sfq perturb 10
+
+# tc filter add dev lo parent 1:0 protocol ip prio 100 u32 match ip dport 6000 0xffff classid 1:10
+
+# tc class add dev lo parent 1:1 classid 1:20 htb rate 3Mbit ceil 5Mbit burst 15k
+
+# tc qdisc add dev lo parent 1:20 handle 20 sfq perturb 10
+
+# tc filter add dev lo parent 1:0 protocol ip prio 100 u32 match ip dport 6001 0xffff classid 1:20

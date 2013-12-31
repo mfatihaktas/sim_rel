@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-import sys,json,logging,getopt,commands,subprocess
+import sys,json,logging,getopt,commands
 from errors import CommandLineOptionError
 from control_comm_intf import ControlCommIntf
+from receiver import Receiver
   
 def get_addr(lintf):
   # search and bind to eth0 ip address
@@ -16,12 +17,14 @@ def get_addr(lintf):
   return intf_eth0_ip
   
 class Consumer(object):
-  def __init__(self, cl_ip, cl_port_list, dtsl_ip, dtsl_port, dtst_port):
+  def __init__(self, cl_ip, cl_port_list, dtsl_ip, dtsl_port, dtst_port, proto, rx_type):
     self.cl_ip = cl_ip
     self.cl_port_list = cl_port_list
     self.dtsl_ip = dtsl_ip
     self.dtsl_port = dtsl_port
     self.dtst_port = dtst_port
+    self.proto = proto
+    self.rx_type = rx_type
     #for control state
     '''0:start, 1:joined to dts, 2:ready to recv s_data'''
     self.state = 0
@@ -55,11 +58,12 @@ class Consumer(object):
       return
     #
     for port in self.cl_port_list:
-      logging.info('server_UDP at ip=%s, port=%s', self.cl_ip, port)
-      #'iperf -u -s -B 127.0.0.1 -p 6000'
-      #cli_o = 
-      subprocess.Popen(args = ['iperf','-u','-s','-B',self.cl_ip,'-p',str(port)] )
-      #logging.info('\n%s',cli_o)
+      addr = (self.cl_ip, port)
+      recver = Receiver(laddr = addr,
+                        proto = self.proto,
+                        rx_type = self.rx_type,
+                        file_url = 'rx_%s.dat' % port )
+      logging.info('recver started at addr=%s', addr)
     #
     self.state = 2
   
@@ -80,12 +84,12 @@ class Consumer(object):
     """
   
 def main(argv):
-  intf = cl_port_list_ = dtst_port = dtsl_ip = dtsl_port = logto = None
+  intf = cl_port_list_ = dtst_port = dtsl_ip = dtsl_port = proto = rx_type = logto = None
   cl_port_list = []
   try:
-    opts, args = getopt.getopt(argv,'',['intf=','cl_port_list=','dtst_port=','dtsl_ip=','dtsl_port=','logto='])
+    opts, args = getopt.getopt(argv,'',['intf=','cl_port_list=','dtst_port=','dtsl_ip=','dtsl_port=','proto=','rx_type=','logto='])
   except getopt.GetoptError:
-    print 'transit.py --intf=<> --cl_port_list=lport1,lport2, ... --dtst_port=<> --dtsl_port=<> --dtsl_ip=<> --logto=<>'
+    print 'transit.py --intf=<> --cl_port_list=lport1,lport2, ... --dtst_port=<> --dtsl_port=<> --dtsl_ip=<> --proto=<> --rx_type=<> --logto=<>'
     sys.exit(2)
   #Initializing global variables with comman line options
   for opt, arg in opts:
@@ -99,6 +103,18 @@ def main(argv):
       dtsl_ip = arg
     elif opt == '--dtsl_port':
       dtsl_port = int(arg)
+    elif opt == '--proto':
+      if arg == 'tcp' or arg == 'udp':
+        proto = arg
+      else:
+        print 'unknown proto=%s' % arg
+        sys.exit(2)
+    elif opt == '--rx_type':
+      if arg == 'file' or arg == 'dummy':
+        rx_type = arg
+      else:
+        print 'unknown rx_type=%s' % arg
+        sys.exit(2)
     elif opt == '--logto':
       logto = arg
   #
@@ -106,7 +122,7 @@ def main(argv):
     cl_port_list.append(int(port))
   #where to log, console or file
   if logto == 'file':
-    logging.basicConfig(filename='c.log',level=logging.DEBUG)
+    logging.basicConfig(filename='logs/c.log',level=logging.DEBUG)
   elif logto == 'console':
     logging.basicConfig(level=logging.DEBUG)
   else:
@@ -117,7 +133,9 @@ def main(argv):
                cl_port_list = cl_port_list,
                dtsl_ip = dtsl_ip,
                dtsl_port = dtsl_port,
-               dtst_port = dtst_port )
+               dtst_port = dtst_port,
+               proto = proto,
+               rx_type = rx_type )
   c.test()
   #
   raw_input('Enter')

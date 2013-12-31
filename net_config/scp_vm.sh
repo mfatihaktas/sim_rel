@@ -1,12 +1,11 @@
+VM=$2 #mininet, n01, n02 ...
+
 if [ $1 = 'fvm' ]
 then
-	scp -r mininet@mininet:~/mininet/mininet_rel . 
+	scp -r mininet@$VM:~/mininet/mininet_rel .
 elif [ $1 = 'tvm' ]
 then
-	scp -r mininet_rel mininet@mininet:~/mininet
-elif [ $1 = 'tvmo' ]
-then
-	scp -r mininet_rel openflow@openflow:~/mininet
+	scp -r mininet_rel mininet@$VM:~/mininet
 else
 	echo "Argument did not match !"
 fi

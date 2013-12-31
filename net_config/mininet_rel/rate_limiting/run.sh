@@ -12,7 +12,7 @@ then
             -- --id=@q0 create Queue other-config:min-rate=100 other-config:max-rate=100 \
             -- --id=@q1 create Queue other-config:min-rate=400 other-config:max-rate=400
   #rate=<>Kbps
-  #other-config:min-rate=50 
+  #other-config:min-rate=50
 elif [ $1  = 'dcq' ]
 then
   #sudo ovs-vsctl clear Port $SW-$DEV qos
