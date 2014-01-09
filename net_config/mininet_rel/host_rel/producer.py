@@ -267,7 +267,7 @@ def main(argv):
                file_url = file_url,
                req_dict = req_dict,
                app_pref_dict = app_pref_dict,
-               htbdir = htbdir)
+               htbdir = htbdir )
   p.test()
   #
   raw_input('Enter')

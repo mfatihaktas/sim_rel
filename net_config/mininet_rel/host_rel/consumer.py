@@ -87,10 +87,13 @@ def main(argv):
   intf = cl_port_list_ = dtst_port = dtsl_ip = dtsl_port = proto = rx_type = logto = None
   cl_port_list = []
   try:
-    opts, args = getopt.getopt(argv,'',['intf=','cl_port_list=','dtst_port=','dtsl_ip=','dtsl_port=','proto=','rx_type=','logto='])
+    opts, args = getopt.getopt(argv,'', \
+    ['intf=','cl_port_list=','dtst_port=','dtsl_ip=','dtsl_port=','proto=','rx_type=','logto='])
   except getopt.GetoptError:
-    print 'transit.py --intf=<> --cl_port_list=lport1,lport2, ... --dtst_port=<> --dtsl_port=<> --dtsl_ip=<> --proto=<> --rx_type=<> --logto=<>'
+    print 'transit.py --intf=<> --cl_port_list=lport1,lport2, ... --dtst_port=<>', \
+          '--dtsl_port=<> --dtsl_ip=<> --proto=<> --rx_type=<> --logto=<>'
     sys.exit(2)
+
   #Initializing global variables with comman line options
   for opt, arg in opts:
     if opt == '--intf':

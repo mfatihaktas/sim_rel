@@ -142,7 +142,7 @@ class Transit(object):
     #datasize_ = 8*len(data) #in bits
     for ftag,compleft in jobtobedone.items():
       if jobtobedone[ftag] > 0:
-        datasize = 8*sys.getsizeof(data)
+        datasize = float(8*sys.getsizeof(data))/1024
         data = itfunc_dict[ftag](datasize, data, proc_cap)
         #update jobtobedone
         jobtobedone[ftag] -= datasize
@@ -171,7 +171,9 @@ def proc_time_model(datasize, func_comp, proc_cap):
   proc_time_model used in sching process. To see if the sching results can be reaklized
   by assuming used models for procing are perfectly accurate.
   '''
-  return 1000*func_comp*(datasize/64)*(1/proc_cap) #(ms)
+  proc_t = 1000*float(func_comp)*float(float(datasize)/64)*float(1/float(proc_cap)) #(ms)
+  logging.info('1000*%s*(%s/64)*(1/%s)=%s', func_comp, datasize, proc_cap, proc_t))
+  return proc_t
   
 # transit data manipulation functions
 def f0(datasize, data, proc_cap):

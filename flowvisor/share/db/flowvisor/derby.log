@@ -1,10 +1,10 @@
 ----------------------------------------------------------------
-Sun Dec 29 20:15:48 EST 2013:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-0143-4112-33aa-ffffd203e341 
+Thu Jan 09 12:51:40 EST 2014:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-0143-7821-876c-ffffd203e341 
 on database directory /home/mehmet/Dropbox/sim_rel/flowvisor/share/db/flowvisor/FlowVisorDB  with class loader sun.misc.Launcher$AppClassLoader@35612600 
 Loaded from file:/home/mehmet/Dropbox/sim_rel/flowvisor/libexec/flowvisor/derby.jar
 java.vendor=Oracle Corporation
 java.runtime.version=1.7.0_25-b30
-user.dir=/home/mehmet/Dropbox/sim_rel/fv_related_t
+user.dir=/home/mehmet/Dropbox/sim_rel/fv_rel
 derby.system.home=/home/mehmet/Dropbox/sim_rel/flowvisor/share/db/flowvisor
 Database Class Loader started - derby.database.classpath=''

@@ -2,6 +2,8 @@
 import sys,socket,json,getopt,struct,time,errno
 import numpy as np
 
+TXCHUNK_SIZE = 4096
+
 class Sender(object):
   def __init__(self, dst_addr, proto, datasize, tx_type, file_url):
     self.dst_addr = dst_addr
@@ -12,8 +14,7 @@ class Sender(object):
     self.sock = None
     #
     if self.proto == 'tcp':
-      self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      self.sock.connect(self.dst_addr)
+      self.sock = None
     elif self.proto == 'udp':
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -22,62 +23,90 @@ class Sender(object):
   
   def init_send(self):
     if self.tx_type == 'dummy':
-      n = int(float(float(self.datasize)*1024/8/8))-5
+      #n = int(float(8*float(self.datasize)*1024/8/8))
+      n = int(float(8*float(4)*1024/8/8))
       data = self.numpy_random(n)
       packer = struct.Struct('%sd' % n)
       data_str = packer.pack(*data)
       #
-      dur = self.dummy_send(data_str)
+      dur = self.dummy_send(data_str, self.datasize*1024/TXCHUNK_SIZE)
       print 'dur=%s' % dur
     elif self.tx_type == 'file':
       self.file_send()
   
   def file_send(self):
+    #TODO: This method needs to be rewritten according to threaded TCPServer approach
+    global TXCHUNK_SIZE
+    #
     print 'start sending file'
     time_s = time.time()
     f=open(self.file_url, "r")
     #
     len_ = 0
-    l = f.read(1024)
+    l = f.read(TXCHUNK_SIZE)
     while (l):
       c_len_ = len(l)
-      #print 'sent size=%sB\n' % c_len_ #8*sys.getsizeof(l)
+      #print 'sent size=%sB\n' % c_len_ #sys.getsizeof(l)
       len_ += c_len_
       if self.proto == 'tcp':
-        self.sock.send(l)
+      #
+        try:
+          self.sock.sendall(l)
+        except socket.error, e:
+          if isinstance(e.args, tuple):
+            print "errno=%d" % e[0]
+            if e[0] == errno.EPIPE:
+              # remote peer disconnected
+              print "Detected remote disconnect"
+            else:
+              # determine and handle different error
+              pass
+          else:
+            print "socket error ", e
+      #
       elif self.proto == 'udp':
         self.sock.sendto(l, self.dst_addr)
-      l = f.read(1024)
-    if self.proto == 'udp':
+      l = f.read(TXCHUNK_SIZE)
+    #
+    if self.proto == 'tcp':
+      self.sock.sendall('EOF')
+    elif self.proto == 'udp':
       self.sock.sendto('EOF', self.dst_addr)
+    print 'EOF is txed.'
     #
     tx_dur = time.time() - time_s
     print 'file_over_%s:%s is sent; size=%sB, dur=%ssec' % (self.proto,self.dst_addr,len_,tx_dur)
     return tx_dur
   
-  def dummy_send(self, data):
+  def dummy_send(self, data, noftimes=1):
     time_s = time.time()
-    if self.proto == 'tcp':
-      try:
-        self.sock.sendall(data)
-      except socket.error, e:
-        if isinstance(e.args, tuple):
-          print "errno is %d" % e[0]
-          if e[0] == errno.EPIPE:
-            # remote peer disconnected
-            print "Detected remote disconnect"
+    nofBs_sent = 0
+    for i in range(0, noftimes):
+      if self.proto == 'tcp':
+        try:
+          self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+          self.sock.connect(self.dst_addr)
+          self.sock.sendall(data)
+          datasize = sys.getsizeof(data)-37 #37 is python string format header length
+          print 'tcp_sent datasize=%sB' % datasize
+          nofBs_sent += datasize
+        except socket.error, e:
+          if isinstance(e.args, tuple):
+            print "errno is %d" % e[0]
+            if e[0] == errno.EPIPE:
+              print "Detected remote peer disconnected"
+            else:
+              # determine and handle different error
+              pass
           else:
-            # determine and handle different error
-            pass
-        else:
-          print "socket error ", e
-    elif self.proto == 'udp':
-      self.sock.sendto(data, self.dst_addr)
+            print "socket error ", e
+      elif self.proto == 'udp':
+        self.sock.sendto(data, self.dst_addr)
+        print 'udp_sent datasize=%sB' % sys.getsizeof(data)
     #
     tx_dur = time.time() - time_s
     print 'dummy_over_%s is sent, to addr=%s' % (self.proto, self.dst_addr)
-    print 'datasize=%sb, dur=%ssec' % (8*sys.getsizeof(data), tx_dur)
-    #print 'data=%s' % data
+    print 'nofBs_sent=%sB, dur=%ssec' % (nofBs_sent, tx_dur)
     return tx_dur
   
   def numpy_random(self, n):
@@ -96,7 +125,8 @@ class Sender(object):
     if self.dst_addr[1] == 7001: #send to t
       data_json = {'type': 'itjob_rule',
                    'data': {'comp': 1.99999998665,
-                            'data_to_ip': u'10.0.0.7',
+                            'proto': 6,
+                            'data_to_ip': u'10.0.0.1',
                             'datasize': 1.0,
                             'itfunc_dict': {u'f1': 1.0, u'f2': 0.99999998665},
                             'proc': 183.150248167,

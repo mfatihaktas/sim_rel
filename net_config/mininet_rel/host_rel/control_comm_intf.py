@@ -41,7 +41,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
       logging.info('Unexpected client_ip=%s', self.client_address[0])
       raise UnknownClientError('Unexpected client', self.client_address[0])
     #
-    msg = self.request.recv(10*1024)
+    msg = self.request.recv(4096)
     cur_thread = threading.current_thread()
     logging.info('cur_thread=%s; server_sctag=%s recved msg_size=%sBs', cur_thread.name, s.sctag, sys.getsizeof(msg))
     #

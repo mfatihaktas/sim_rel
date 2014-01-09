@@ -122,7 +122,7 @@ def main(argv):
     cl_port_list.append(int(port))
   #where to log, console or file
   if logto == 'file':
-    logging.basicConfig(filename='c.log',level=logging.DEBUG)
+    logging.basicConfig(filename='logs/c.log',level=logging.DEBUG)
   elif logto == 'console':
     logging.basicConfig(level=logging.DEBUG)
   else:

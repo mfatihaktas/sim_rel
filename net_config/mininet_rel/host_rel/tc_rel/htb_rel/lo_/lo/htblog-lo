@@ -1,4 +1,4 @@
-# Mon Dec 30 22:19:52 EST 2013
+# Sat Jan  4 20:54:24 EST 2014
 
 # ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
@@ -35,7 +35,7 @@ RTNETLINK answers: No such file or directory
 4: vboxnet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UNKNOWN mode DEFAULT qlen 1000
     link/ether 0a:00:27:00:00:00 brd ff:ff:ff:ff:ff:ff
 
-# tc class add dev lo parent 5: classid 5:1 htb rate 5Mbit burst 15k
+# tc class add dev lo parent 5: classid 5:1 htb rate 50Kbit burst 15k
 
 # tc class add dev lo parent 5:1 classid 5:10 htb rate 10Kbit ceil 20Kbit burst 15k
 
@@ -43,7 +43,7 @@ RTNETLINK answers: No such file or directory
 
 # tc filter add dev lo parent 5:0 protocol ip prio 100 u32 match ip dport 6000 0xffff classid 5:10
 
-# tc class add dev lo parent 5:1 classid 5:20 htb rate 3Mbit ceil 5Mbit burst 15k
+# tc class add dev lo parent 5:1 classid 5:20 htb rate 30Kbit ceil 35Kbit burst 15k
 
 # tc qdisc add dev lo parent 5:20 handle 20 sfq perturb 10
 

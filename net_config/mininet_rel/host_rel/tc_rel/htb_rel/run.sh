@@ -5,15 +5,17 @@ MFADIR='/home/mehmet/Dropbox/sim_rel/net_config/mininet_rel/host_rel/tc_rel/htb_
 #
 
 PDEV='p-eth0'
+PDIR='/home/mininet/mininet/mininet_rel/host_rel/tc_rel/htb_rel/p-eth0_'
+
 CDEV='c-eth0'
-MINDIR='/home/mininet/mininet/mininet_rel/host_rel/tc_rel/htb_rel'
+CDIR='/home/mininet/mininet/mininet_rel/host_rel/tc_rel/htb_rel'
 
 if [ $2  = 'p' ]; then
-  DIR=$MINDIR
+  DIR=$PDIR
   DEV=$PDEV
   OPT='not_add_root'
 elif [ $2  = 'c' ]; then
-  DIR=$MINDIR
+  DIR=$CDIR
   DEV=$CDEV
   OPT='not_add_root'
 elif [ $2  = 'm' ]; then

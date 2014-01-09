@@ -36,9 +36,9 @@ class MyTopo( Topo ):
     #link opts
     #local_linkopts = dict(bw=100, delay='5ms', loss=0, max_queue_size=1000, use_htb=True)
     #wide_linkopts = dict(bw=100, delay='50ms', loss=0, max_queue_size=1000, use_htb=True)
-    local_linkopts = dict(bw=1000, delay='1ms', loss=0, max_queue_size=1000000, use_htb=True)
-    wide_linkopts = dict(bw=1000, delay='1ms', loss=0, max_queue_size=1000000, use_htb=True)
-    dsa_linkopts = dict(bw=1000, delay='1ms', loss=0, max_queue_size=10000, use_htb=True)
+    local_linkopts = dict(bw=1000, delay='5ms', loss=0, max_queue_size=1000000, use_htb=True)
+    wide_linkopts = dict(bw=1000, delay='50ms', loss=0, max_queue_size=1000000, use_htb=True)
+    dsa_linkopts = dict(bw=1000, delay='0ms', loss=0, max_queue_size=10000, use_htb=True)
     # Add links
     self.addLink( p,s11, **wide_linkopts )
     self.addLink( s11,s1, **local_linkopts )
@@ -66,7 +66,7 @@ def run_tnodes(hosts):
   popens = {}
   for host in hosts:
     host.cmdPrint('pwd')
-    popens[host] = host.popen('./run.sh %s' % host.name)
+    popens[host] = host.popen('./run_hosts.sh %s' % host.name)
   """
   #Monitor them and print output
   for host,popen in popens.items():
@@ -84,8 +84,8 @@ if __name__ == '__main__':
   setLogLevel( 'info' )
   info( '# Creating network\n' )
   net = Mininet( topo=MyTopo(), link=TCLink, controller=RemoteController)
-  cont=net.addController('r1', controller=RemoteController, ip='10.0.0.7',port=6633)
-  #cont=net.addController('r1', controller=RemoteController, ip='192.168.56.1',port=6633)
+  #cont=net.addController('r1', controller=RemoteController, ip='10.0.0.7',port=6633)
+  cont=net.addController('r1', controller=RemoteController, ip='192.168.56.1',port=6633)
   cont.start()
   
   p, c = net.getNodeByName('p', 'c')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
   #
   net.start()
   #
-  #run_tnodes([t11, t21, t31])
+  run_tnodes([t11, t21, t31])
   #
   CLI( net )
   net.stop()

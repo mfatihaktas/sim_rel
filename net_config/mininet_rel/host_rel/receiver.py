@@ -4,35 +4,56 @@ import sys,socket,SocketServer,getopt,threading,commands
 #import pprint,json
 #########################  UDP Server-Handler  ###########################
 class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
-  pass
+  def __init__(self, server_address, RequestHandlerClass):
+    self.nofBs_rxed = 0
+    SocketServer.UDPServer.__init__(self, server_address, RequestHandlerClass)
+
+  def get_nofBs_rxed(self):
+    return self.nofBs_rxed
+
+  def inc_nOfBs_rxed(self, howmuch):
+    self.nofBs_rxed += howmuch
 
 class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
   def handle(self):
     data = self.request[0].strip()
     cur_thread = threading.current_thread()
-    print 'cur_thread={}; dummyrecver_udp rxed \ndatasize={}b \ndata={}'.format(cur_thread.name, 8*sys.getsizeof(data), '...')
-    """
-    sock = self.request[1]
-    response = 'ok'
-    sock.sendto(response, self.client_address)
-    print 'response=%s is sent back to client.' % response
-    """
+    datasize = sys.getsizeof(data)-37 #37 is python string format header length
+    #
+    s = self.server
+    s.inc_nOfBs_rxed(datasize)
+    nofBs_rxed = s.get_nofBs_rxed()
+    #
+    print 'cur_thread=%s; threadedserver_udp:%s rxed' % (cur_thread.name, s.server_address[1])
+    print 'datasize=%sB\ndata=%s' % (datasize, '...')
+    print 'nofBs_rxed=%s' % nofBs_rxed
   
 #########################  TCP Server-Handler  ###########################
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-  pass
+  def __init__(self, server_address, RequestHandlerClass):
+    self.nofBs_rxed = 0
+    SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
+  
+  def get_nofBs_rxed(self):
+    return self.nofBs_rxed
+
+  def inc_nOfBs_rxed(self, howmuch):
+    self.nofBs_rxed += howmuch
   
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
   def handle(self):
-    data = self.request.recv(1024*10)
+    data = self.request.recv(4096)
     cur_thread = threading.current_thread()
-    print 'cur_thread={}; dummyrecver_tcp rxed \ndatasize={}b \ndata={}'.format(cur_thread.name, 8*sys.getsizeof(data), '...')
-    """
-    response = 'ok'
-    self.request.sendall(response)
-    print 'response=%s is sent back to client.' % response
-    """
-  
+    datasize = sys.getsizeof(data)-37 #37 is python string format header length
+    #
+    s = self.server
+    s.inc_nOfBs_rxed(datasize)
+    nofBs_rxed = s.get_nofBs_rxed()
+    #
+    print 'cur_thread=%s; threadedserver_tcp:%s rxed' % (cur_thread.name, s.server_address[1])
+    print 'datasize=%sB\ndata=%s' % (datasize, '...')
+    print 'nofBs_rxed=%s' % nofBs_rxed
+
 ##########################################################################
 class Receiver(object):
   def __init__(self, laddr, proto, rx_type, file_url):
@@ -47,37 +68,48 @@ class Receiver(object):
     elif rx_type == 'dummy':
       if self.proto == 'tcp':
         self.server = ThreadedTCPServer(self.laddr, ThreadedTCPRequestHandler)
+        #while trying single thread TCPServer
+        #self.server = SocketServer.TCPServer(self.laddr, TCPRequestHandler)
+        #print 'rxdummy_{} is listening on laddr={}'.format(self.proto, self.laddr)
+        #self.server.serve_forever()
       elif self.proto == 'udp':
         self.server = ThreadedUDPServer(self.laddr, ThreadedUDPRequestHandler)
       server_thread = threading.Thread(target=self.server.serve_forever)
       server_thread.daemon = True
       server_thread.start()
-      print '{}_recver_{} is started on laddr={}'.format(self.rx_type, self.proto, self.laddr)
+      print 'dummyrx_threaded%sserver started on laddr=%s' % (self.proto, self.laddr)
   
   def rx_file(self):
-    print 'rxfile_%s_sock is listening on addr=%s' % (self.proto, self.laddr, )
+    print 'filerx_%s_sock is listening on laddr=%s' % (self.proto, self.laddr, )
     if self.proto == 'tcp':
       self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.rx_sock.bind(self.laddr)
-      self.rx_sock.listen(1) # Acepta hasta 10 conexiones entrantes.
+      self.rx_sock.listen(1)
       sc, addr = self.rx_sock.accept()
       print '%s_file_recver gets conn from addr=%s' % (self.proto, addr[0])
       #while (True):
       l = sc.recv(1024)
-      while (l):
+      rxed_tlen = len(l)
+      while (l != 'EOF'):
         self.f_obj.write(l)
         l = sc.recv(1024)
-        print 'recved size=%sB\n' % len(l) #8*sys.getsizeof(l)
+        rxed_tlen += len(l)
+        print 'rxed size=%sB, rxed_tlen=%sB' % (len(l), rxed_tlen)
+      print 'tcp_EOF is rxed.'
       #
       sc.close()
     elif self.proto == 'udp':
       self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-      self.rx_sock.bind(self.laddr)
+      self.rx_sock.bind(self.laddr)      
       l = self.rx_sock.recv(1024)
-      while l != 'EOF':
-        self.f_obj.write(l)
+      rxed_tlen = len(l)
+      while (l != 'EOF'):
+        self.f_obj.write(l)        
         l = self.rx_sock.recv(1024)
-        print 'recved size=%sB\n' % len(l) #8*sys.getsizeof(l)
+        rxed_tlen += len(l)
+        print 'rxed size=%sB, rxed_tlen=%sB' % (len(l), rxed_tlen)
+        #print 'rxed data=\n%s' % l
+      print 'udp_EOF is rxed.'
     #
     self.f_obj.close()
     self.rx_sock.close()

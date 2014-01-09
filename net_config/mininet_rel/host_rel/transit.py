@@ -23,15 +23,32 @@ class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
   
 class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
   def handle(self):
-    cur_thread = threading.current_thread()
-    #socket = self.request[1]
-    server = self.server
     data = self.request[0].strip()
+    #socket = self.request[1]
+    cur_thread = threading.current_thread()
+    server = self.server
     s_tp_dst = int(server.server_address[1])
-    logging.info('cur_thread=%s; s_tp_dst=%s, recv_data_size=%sbs', cur_thread.name, s_tp_dst, 8*sys.getsizeof(data))
+    datasize = sys.getsizeof(data) #in MB
+    logging.info('cur_udp_thread=%s; s_tp_dst=%s, rxed_data_size=%sB', cur_thread.name, s_tp_dst, datasize)
     #
-    server.call_back(s_tp_dst, data)
+    server.call_back(s_tp_dst, data, datasize)
+##########################  TCP Server-Handler  ################################
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+  def __init__(self, call_back, server_addr, RequestHandlerClass):
+    SocketServer.TCPServer.__init__(self, server_addr, RequestHandlerClass)
+    self.call_back = call_back
   
+class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+  def handle(self):
+    data = self.request.recv(4096)
+    #
+    cur_thread = threading.current_thread()
+    server = self.server
+    s_tp_dst = int(server.server_address[1])
+    datasize = sys.getsizeof(data) #in MB
+    logging.info('cur_tcp_thread=%s; s_tp_dst=%s, rxed_data_size=%sB', cur_thread.name, s_tp_dst, datasize)
+    #
+    server.call_back(s_tp_dst, data, datasize)
 #############################  Class Transit  ##################################
 class Transit(object):
   def __init__(self, nodename, tl_ip, tl_port, dtsl_ip, dtsl_port):
@@ -50,17 +67,19 @@ class Transit(object):
                           s_addr = (self.tl_ip,self.tl_port),
                           c_addr = (self.dtsl_ip,self.dtsl_port) )
     #
+    """
     self.session_soft_state_span = 1000
     s_soft_expire_timer = threading.Timer(self.session_soft_state_span,
                                           self._handle_SessionSoftTimerExpire)
     s_soft_expire_timer.daemon = True
     s_soft_expire_timer.start()
+    """
     #
     logging.info('%s is ready...', self.nodename)
   
   def _handle_SessionSoftTimerExpire(self):
     while True:
-      logging.info('_handle_SessionSoftTimerExpire;')
+      #logging.info('_handle_SessionSoftTimerExpire;')
       #print 's_info_dict:'
       #pprint.pprint(s_info_dict )
       for s_tp_dst, s_info in self.s_info_dict.items():
@@ -71,12 +90,15 @@ class Transit(object):
           del self.s_info_dict[s_tp_dst]
           logging.info('inactive_time_span=%s\ns with tp_dst:%s is soft-expired.',inactive_time_span,s_tp_dst)
       #
-      logging.info('------')
+      #logging.info('------')
       # do every ... secs
       time.sleep(self.session_soft_state_span)
   
   ##########################  handle dts_comm  #################################
   def _handle_recvfromdts(self, msg):
+    """
+    TODO: Comm btw DTS-t is assumed to be perfect. Not really...
+    """
     #msg = [type_, data_]
     [type_, data_] = msg
     if type_ == 'itjob_rule':
@@ -87,21 +109,35 @@ class Transit(object):
     stpdst = int(data_['s_tp'])
     if stpdst in self.s_info_dict:
       self.bye_s(stpdst)
-    #updating global dicts
     del data_['s_tp']
-    jobtobedone = {ftag:1000*data_['datasize']*comp/func_comp_dict[ftag] \
-                     for ftag,comp in data_['itfunc_dict'].items()}
+    #
+    to_ip = data_['data_to_ip']
+    del data_['data_to_ip']
+    #
+    to_addr = (to_ip, stpdst) #goes into s_info_dict
+    #
+    jobtobedone = {ftag:1024*data_['datasize']*comp/func_comp_dict[ftag] \
+                     for ftag,comp in data_['itfunc_dict'].items() }
     data_.update( {'jobtobedone': jobtobedone} )
-    #calc est_prot
+    #
+    proto = int(data_['proto']) #6:TCP, 17:UDP - goes into s_info_dict
+    del data_['proto']
+    #calc est_proct
     est_proct = proc_time_model(datasize = float(data_['datasize']),
                                 func_comp = float(data_['comp']),
                                 proc_cap = float(data_['proc']))
     #
+    (s_server, s_server_thread) = self.create_s_server(proto = proto, port = stpdst)
     self.s_info_dict[stpdst] = {'itjobrule':data_,
-                                's_server':self.create_s_server(stpdst),
-                                's_sock':self.create_s_sock(),
+                                'proto': proto,
+                                'to_addr': to_addr,
+                                's_server': s_server,
+                                #'s_server_thread': s_server_thread,
+                                's_sock':self.create_s_sock(proto = proto,
+                                                            to_addr = to_addr),
                                 's_active_last_time':time.time(),
-                                'est_proct': est_proct }
+                                'est_proct': est_proct,
+                                's_data_rxed': False }
     #
     logging.info('welcome new_s; tpdst=%s, s_info=\n%s', stpdst, pprint.pformat(self.s_info_dict[stpdst]))
   
@@ -113,49 +149,81 @@ class Transit(object):
     logging.info('bye s; tpdst=%s', stpdst)
   
   #########################  handle s_data_traffic  ############################
-  def create_s_sock(self): #return udp sock
-    return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  def create_s_sock(self, proto, to_addr): #return udp sock
+    if proto == 6:
+      return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    elif proto == 17:
+      return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    else:
+      logging.error('Unexpected proto=%s', proto)
+      return
   
-  def create_s_server(self, port):
+  def create_s_server(self, proto, port):
     s_addr = (self.tl_ip, port)
-    s_server = ThreadedUDPServer(self._handle_recvsdata, s_addr, ThreadedUDPRequestHandler)
+    s_server = None
+    if proto == 6:
+      s_server = ThreadedTCPServer(self._handle_recvsdata, s_addr, ThreadedTCPRequestHandler)
+    elif proto == 17:
+      s_server = ThreadedUDPServer(self._handle_recvsdata, s_addr, ThreadedUDPRequestHandler)
+    else:
+      logging.error('Unexpected proto=%s', proto)
+      return
+    #
     s_server_thread = threading.Thread(target=s_server.serve_forever)
     s_server_thread.daemon = True
     s_server_thread.start()
     #
-    logging.info('udp_server is started at s_addr=%s', s_addr )
-    return s_server
+    logging.info('%s_server is started at s_addr=%s', proto,s_addr )
+    return (s_server, s_server_thread)
   
-  def _handle_recvsdata(self, s_tp_dst, data):
+  def _handle_recvsdata(self, s_tp_dst, data, datasize):
     if not s_tp_dst in self.s_info_dict:
       raise NoItruleMatchError('No itjobrule match', s_tp_dst)
       return
-    data = self.proc_pipeline(s_tp_dst = s_tp_dst,
-                              data = data )
-    self.forward_data(s_tp_dst, data)
+    #
+    data_ = self.proc_pipeline(s_tp_dst = s_tp_dst,
+                              data = data,
+                              datasize = datasize )
+    datasize_ = sys.getsizeof(data_)
+    self.forward_data(s_tp_dst, data_, datasize_)
   
-  def proc_pipeline(self, s_tp_dst, data):
+  def proc_pipeline(self, s_tp_dst, data, datasize):
+    #datasize is in MB
     global itfunc_dict
     itjobrule = self.s_info_dict[s_tp_dst]['itjobrule']
     jobtobedone = itjobrule['jobtobedone']
     proc_cap = itjobrule['proc']
     #datasize_ = 8*len(data) #in bits
     for ftag,compleft in jobtobedone.items():
+      datasize = float(8*datasize)/1024
+      data = itfunc_dict[ftag](datasize, data, proc_cap)
+      #for now no need for checking how much left to process for session
+      """
       if jobtobedone[ftag] > 0:
-        datasize = 8*sys.getsizeof(data)
+        datasize = float(8*sys.getsizeof(data))/1024
         data = itfunc_dict[ftag](datasize, data, proc_cap)
         #update jobtobedone
         jobtobedone[ftag] -= datasize
+      """
     #
     return data
   
-  def forward_data(self, s_tp_dst, data):
+  def forward_data(self, s_tp_dst, data, datasize):
     s_info = self.s_info_dict[s_tp_dst]
+    proto = s_info['proto']
+    to_addr = s_info['to_addr']
     #
-    to_ip = s_info['itjobrule']['data_to_ip']
     sock = s_info['s_sock']
-    sock.sendto(data, (to_ip, int(s_tp_dst)) )
-    logging.info('proced data is forwarded to_ip:%s', to_ip)
+    if proto == 6:
+      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      logging.info('s_tcpsock is trying to connect to addr=%s', to_addr)
+      sock.connect(to_addr)
+      sock.sendall(data)
+      #datasent_size = sock.send(data)
+    elif proto == 17:
+      sock.sendto(data, to_addr)
+    #
+    logging.info('proced data is forwarded to_addr=%s', to_addr)
     #update session_active_last_time
     s_info['s_active_last_time']=time.time()
   
@@ -165,13 +233,15 @@ func_comp_dict = {'f0':0.5,
                   'f2':2,
                   'f3':3,
                   'f4':4 }
-  
+
 def proc_time_model(datasize, func_comp, proc_cap):
   '''
   proc_time_model used in sching process. To see if the sching results can be reaklized
   by assuming used models for procing are perfectly accurate.
   '''
-  return 1000*func_comp*(datasize/64)*(1/proc_cap) #(ms)
+  proc_t = 1000*float(func_comp)*float(float(datasize)/64)*float(1/float(proc_cap)) #(ms)
+  #logging.info('1000*%s*(%s/64)*(1/%s)=%s', func_comp, datasize, proc_cap, proc_t)
+  return proc_t
   
 # transit data manipulation functions
 def f0(datasize, data, proc_cap):
