@@ -17,7 +17,8 @@ def get_addr(lintf):
   return intf_eth0_ip
   
 class Consumer(object):
-  def __init__(self, cl_ip, cl_port_list, dtsl_ip, dtsl_port, dtst_port, proto, rx_type):
+  def __init__(self, cl_ip, cl_port_list, dtsl_ip, dtsl_port, dtst_port, proto, 
+               rx_type, logto):
     self.cl_ip = cl_ip
     self.cl_port_list = cl_port_list
     self.dtsl_ip = dtsl_ip
@@ -25,6 +26,7 @@ class Consumer(object):
     self.dtst_port = dtst_port
     self.proto = proto
     self.rx_type = rx_type
+    self.logto = logto
     #for control state
     '''0:start, 1:joined to dts, 2:ready to recv s_data'''
     self.state = 0
@@ -62,7 +64,8 @@ class Consumer(object):
       recver = Receiver(laddr = addr,
                         proto = self.proto,
                         rx_type = self.rx_type,
-                        file_url = 'rx_%s.dat' % port )
+                        file_url = 'rx_%s.dat' % port,
+                        logto = self.logto )
       logging.info('recver started at addr=%s', addr)
     #
     self.state = 2
@@ -125,7 +128,7 @@ def main(argv):
     cl_port_list.append(int(port))
   #where to log, console or file
   if logto == 'file':
-    logging.basicConfig(filename='logs/c.log',level=logging.DEBUG)
+    logging.basicConfig(filename='logs/c.log',filemode='w',level=logging.DEBUG)
   elif logto == 'console':
     logging.basicConfig(level=logging.DEBUG)
   else:
@@ -138,7 +141,8 @@ def main(argv):
                dtsl_port = dtsl_port,
                dtst_port = dtst_port,
                proto = proto,
-               rx_type = rx_type )
+               rx_type = rx_type,
+               logto = logto )
   c.test()
   #
   raw_input('Enter')

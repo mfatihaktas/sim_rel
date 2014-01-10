@@ -181,10 +181,14 @@ class Transit(object):
       raise NoItruleMatchError('No itjobrule match', s_tp_dst)
       return
     #
+    """
     data_ = self.proc_pipeline(s_tp_dst = s_tp_dst,
                               data = data,
                               datasize = datasize )
+    """
+    data_ = data
     datasize_ = sys.getsizeof(data_)
+    #
     self.forward_data(s_tp_dst, data_, datasize_)
   
   def proc_pipeline(self, s_tp_dst, data, datasize):

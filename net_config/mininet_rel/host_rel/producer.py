@@ -16,8 +16,9 @@ def get_addr(lintf):
   return intf_eth0_ip
   
 class Producer(object):
-  def __init__(self, intf, pl_port, dtsl_ip, dtsl_port, cl_ip, proto,
-                     tx_type, file_url, req_dict,app_pref_dict, htbdir):
+  def __init__(self, intf, pl_port, dtsl_ip, dtsl_port, cl_ip, proto,tx_type, file_url,
+               req_dict,app_pref_dict, htbdir, logto):
+    self.logto = logto
     self.intf = intf
     self.pl_ip = get_addr(intf)
     self.pl_port = pl_port
@@ -111,17 +112,14 @@ class Producer(object):
     f.close()
     logging.debug('data=\n%s\nis written to filename=%s',data,filename)
   
-  def get_htbclass_confdata(self, rate, burst, leaf, rule):
-    #print 'rate=%s, rule=%s' % (rate, rule)
-    return 'RATE=%s\nBURST=%s\nLEAF=%s\nRULE=%s' % (rate,burst,leaf,rule)
-  
   def init_htbconf(self, parism_l, p_bw, p_tp_dst):
     for p_id in range(0, parism_l):
       data = self.get_htbclass_confdata(rate = str(p_bw[p_id])+'Mbit',
                                         burst = '15k',
-                                        leaf = 'sfq',
-                                        rule = '%s:%s' % (self.cl_ip, p_tp_dst[p_id]) )
-      filename = '%s-5:%s.%s' % (self.intf, (p_id+1)*10, p_tp_dst[p_id])
+                                        leaf = 'netem',
+                                        rule = '*:%s' % p_tp_dst[p_id] )
+                                        #rule = '%s:%s' % (self.cl_ip, p_tp_dst[p_id]) )
+      filename = '%s-1:%s.%s' % (self.intf, (p_id+1)*11, p_tp_dst[p_id])
       self.write_to_file(filename, data)
     #
     self.run_htbinit('dconf')
@@ -130,6 +128,10 @@ class Producer(object):
     #
     logging.info('init_htbconf is done')
   
+  def get_htbclass_confdata(self, rate, burst, leaf, rule):
+    #print 'rate=%s, rule=%s' % (rate, rule)
+    return 'RATE=%s\nBURST=%s\nLEAF=%s\nRULE=%s' % (rate,burst,leaf,rule)
+
   def run_htbinit(self, command):
     cli_o = None
     if command == 'conf':
@@ -148,7 +150,8 @@ class Producer(object):
         logging.error('###DCONF_ERR=%s', e.output)
     elif command == 'show':
       try:
-        cli_o = subprocess.check_output(['sudo','%s/%s' % (self.htbdir,'htb.init.sh'),'stats'] )
+        cli_o = subprocess.check_output(['sudo','%s/%s' % (self.htbdir,'run.sh'),'show','p'] )
+        #cli_o = subprocess.check_output(['sudo','%s/%s' % (self.htbdir,'htb.init.sh'),'stats'] )
       except subprocess.CalledProcessError as e:
         logging.error('###SHOW_ERR=%s', e.output)
     else:
@@ -168,7 +171,8 @@ class Producer(object):
                     proto = self.proto,
                     datasize = datasize,
                     tx_type = self.tx_type,
-                    file_url = self.file_url )
+                    file_url = self.file_url,
+                    logto = self.logto )
     sender.init_send()
   
   def send_join_req(self):
@@ -251,7 +255,7 @@ def main(argv):
       htbdir = arg
   #where to log; console or file
   if logto == 'file':
-    logging.basicConfig(filename='logs/p.log',level=logging.DEBUG)
+    logging.basicConfig(filename='logs/p.log', filemode='w', level=logging.DEBUG)
   elif logto == 'console':
     logging.basicConfig(level=logging.DEBUG)
   else:
@@ -267,7 +271,8 @@ def main(argv):
                file_url = file_url,
                req_dict = req_dict,
                app_pref_dict = app_pref_dict,
-               htbdir = htbdir )
+               htbdir = htbdir,
+               logto = logto )
   p.test()
   #
   raw_input('Enter')

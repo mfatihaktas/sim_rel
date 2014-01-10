@@ -36,8 +36,8 @@ class MyTopo( Topo ):
     #link opts
     #local_linkopts = dict(bw=100, delay='5ms', loss=0, max_queue_size=1000, use_htb=True)
     #wide_linkopts = dict(bw=100, delay='50ms', loss=0, max_queue_size=1000, use_htb=True)
-    local_linkopts = dict(bw=1000, delay='5ms', loss=0, max_queue_size=1000000, use_htb=True)
-    wide_linkopts = dict(bw=1000, delay='50ms', loss=0, max_queue_size=1000000, use_htb=True)
+    local_linkopts = dict(bw=1000, delay='0ms', loss=0, max_queue_size=1000000, use_htb=True)
+    wide_linkopts = dict(bw=1000, delay='0ms', loss=0, max_queue_size=1000000, use_htb=True)
     dsa_linkopts = dict(bw=1000, delay='0ms', loss=0, max_queue_size=10000, use_htb=True)
     # Add links
     self.addLink( p,s11, **wide_linkopts )

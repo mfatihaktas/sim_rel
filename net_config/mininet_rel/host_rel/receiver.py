@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
-import sys,socket,SocketServer,getopt,threading,commands
+import sys,socket,SocketServer,getopt,threading,commands,time,sys,logging
 #import pprint,json
+
+RXCHUNK_SIZE = 1024 #4096
+
 #########################  UDP Server-Handler  ###########################
 class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
   def __init__(self, server_address, RequestHandlerClass):
@@ -24,10 +27,9 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
     s.inc_nOfBs_rxed(datasize)
     nofBs_rxed = s.get_nofBs_rxed()
     #
-    print 'cur_thread=%s; threadedserver_udp:%s rxed' % (cur_thread.name, s.server_address[1])
-    print 'datasize=%sB\ndata=%s' % (datasize, '...')
-    print 'nofBs_rxed=%s' % nofBs_rxed
-  
+    logging.info('cur_thread=%s; threadedserver_udp:%s rxed', cur_thread.name, s.server_address[1])
+    logging.info('datasize=%sB\ndata=%s', datasize, '...')
+    logging.info('nofBs_rxed=%s, time=%s', nofBs_rxed, time.time() )
 #########################  TCP Server-Handler  ###########################
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
   def __init__(self, server_address, RequestHandlerClass):
@@ -42,7 +44,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
   
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
   def handle(self):
-    data = self.request.recv(4096)
+    data = self.request.recv(RXCHUNK_SIZE)
     cur_thread = threading.current_thread()
     datasize = sys.getsizeof(data)-37 #37 is python string format header length
     #
@@ -50,15 +52,25 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     s.inc_nOfBs_rxed(datasize)
     nofBs_rxed = s.get_nofBs_rxed()
     #
-    print 'cur_thread=%s; threadedserver_tcp:%s rxed' % (cur_thread.name, s.server_address[1])
-    print 'datasize=%sB\ndata=%s' % (datasize, '...')
-    print 'nofBs_rxed=%s' % nofBs_rxed
-
+    logging.info('cur_thread=%s; threadedserver_tcp:%s rxed', cur_thread.name, s.server_address[1])
+    logging.info('datasize=%sB\ndata=%s', datasize, '...')
+    logging.info('nofBs_rxed=%s, time=%s', nofBs_rxed, time.time() )
 ##########################################################################
 class Receiver(object):
-  def __init__(self, laddr, proto, rx_type, file_url):
-    self.laddr = laddr
+  def __init__(self, laddr, proto, rx_type, file_url, logto):
+    if logto == 'file':
+      logging.basicConfig(filename='logs/r_lport=%s.log' % laddr[1], filemode='w', level=logging.DEBUG)
+    elif logto == 'console':
+      logging.basicConfig(level=logging.DEBUG)
+    else:
+      print 'Unexpected logto=%s' % logto
+      sys.exit(2)
+    #
+    if not (proto == 'tcp' or proto == 'udp'):
+      logging.error('Unexpected proto=%s', proto)
     self.proto = proto
+    #
+    self.laddr = laddr
     self.file_url = file_url
     #
     self.rx_type = rx_type
@@ -68,53 +80,56 @@ class Receiver(object):
     elif rx_type == 'dummy':
       if self.proto == 'tcp':
         self.server = ThreadedTCPServer(self.laddr, ThreadedTCPRequestHandler)
-        #while trying single thread TCPServer
-        #self.server = SocketServer.TCPServer(self.laddr, TCPRequestHandler)
-        #print 'rxdummy_{} is listening on laddr={}'.format(self.proto, self.laddr)
-        #self.server.serve_forever()
+        self.server.allow_reuse_address = True
       elif self.proto == 'udp':
         self.server = ThreadedUDPServer(self.laddr, ThreadedUDPRequestHandler)
+      #
       server_thread = threading.Thread(target=self.server.serve_forever)
       server_thread.daemon = True
       server_thread.start()
-      print 'dummyrx_threaded%sserver started on laddr=%s' % (self.proto, self.laddr)
+      logging.info('dummyrx_threaded%sserver started on laddr=%s', self.proto, self.laddr)
   
   def rx_file(self):
-    print 'filerx_%s_sock is listening on laddr=%s' % (self.proto, self.laddr, )
+    logging.info('filerx_%s_sock is listening on laddr=%s', self.proto, self.laddr)
     if self.proto == 'tcp':
       self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.rx_sock.bind(self.laddr)
       self.rx_sock.listen(1)
       sc, addr = self.rx_sock.accept()
-      print '%s_file_recver gets conn from addr=%s' % (self.proto, addr[0])
+      logging.info('%s_file_recver gets conn from addr=%s', self.proto, addr[0])
       #while (True):
-      l = sc.recv(1024)
+      l = sc.recv(RXCHUNK_SIZE)
       rxed_tlen = len(l)
       while (l != 'EOF'):
         self.f_obj.write(l)
-        l = sc.recv(1024)
+        l = sc.recv(RXCHUNK_SIZE)
         rxed_tlen += len(l)
-        print 'rxed size=%sB, rxed_tlen=%sB' % (len(l), rxed_tlen)
-      print 'tcp_EOF is rxed.'
+        logging.info('rxed size=%sB, rxed_tlen=%sB', len(l), rxed_tlen)
+      logging.info('tcp_EOF is rxed.')
       #
       sc.close()
     elif self.proto == 'udp':
       self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       self.rx_sock.bind(self.laddr)      
-      l = self.rx_sock.recv(1024)
+      l = self.rx_sock.recv(RXCHUNK_SIZE)
       rxed_tlen = len(l)
       while (l != 'EOF'):
         self.f_obj.write(l)        
-        l = self.rx_sock.recv(1024)
+        l = self.rx_sock.recv(RXCHUNK_SIZE)
         rxed_tlen += len(l)
-        print 'rxed size=%sB, rxed_tlen=%sB' % (len(l), rxed_tlen)
-        #print 'rxed data=\n%s' % l
-      print 'udp_EOF is rxed.'
+        logging.info('rxed size=%sB, rxed_tlen=%sB', len(l), rxed_tlen)
+      #
+      logging.info('udp_EOF is rxed.')
     #
     self.f_obj.close()
     self.rx_sock.close()
-    print 'rx_file is complete...'
+    logging.info('rx_file is complete...')
   
+  def shutdown(self):
+    if self.rx_type == 'dummy':
+      self.server.shutdown()
+      logging.debug('dummy_server is shutdown')
+
 def get_laddr(lintf):
   # search and bind to eth0 ip address
   intf_list = commands.getoutput("ifconfig -a | sed 's/[ \t].*//;/^$/d'").split('\n')
@@ -126,12 +141,13 @@ def get_laddr(lintf):
   intf_eth0_ip = intf_eth0_ip[intf_eth0_ip.index('inet') + 1].split('/')[0]
   return intf_eth0_ip
 
+###
 def main(argv):
-  lport = lintf = proto = rx_type = file_url = None
+  lport = lintf = proto = rx_type = file_url = logto = None
   try:
-    opts, args = getopt.getopt(argv,'',['lport=','lintf=','proto=','rx_type=','file_url='])
+    opts, args = getopt.getopt(argv,'',['lport=','lintf=','proto=','rx_type=','file_url=', 'logto='])
   except getopt.GetoptError:
-    print 'receiver.py --lport=<> --lintf=<> --proto=tcp/udp --rx_type=file/dummy --file_url=<>'
+    print 'receiver.py --lport=<> --lintf=<> --proto=tcp/udp --rx_type=file/dummy --file_url=<> --logto=<>'
     sys.exit(2)
   #Initializing variables with comman line options
   for opt, arg in opts:
@@ -153,14 +169,18 @@ def main(argv):
         sys.exit(2)
     elif opt == '--file_url':
       file_url = arg
+    elif opt == '--logto':
+      logto = arg
   #
   lip = get_laddr(lintf)
   dr = Receiver(laddr = (lip, lport),
                 proto = proto,
                 rx_type = rx_type,
-                file_url = file_url )
+                file_url = file_url,
+                logto = logto )
   #
   raw_input('Enter')
+  dr.shutdown()
   
 if __name__ == "__main__":
   main(sys.argv[1:])

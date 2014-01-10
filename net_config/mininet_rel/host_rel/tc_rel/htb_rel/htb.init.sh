@@ -436,6 +436,9 @@ HTB_CLASS="RATE\|CEIL\|BURST\|CBURST\|PRIO\|LEAF\|MTU"
 HTB_CLASS="$HTB_CLASS\|PRIO_RULE\|PRIO_MARK\|PRIO_REALM"
 HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB"
 
+### MFA added
+ROOTID=5
+
 #############################################################################
 ############################# SUPPORT FUNCTIONS #############################
 #############################################################################
@@ -622,12 +625,13 @@ htb_show () {
 minstop () {
   #delete everything but root qdisc and class on dev=$1 - arg to procedure
   #first delete all filters
-  sudo tc filter del dev $1 parent 1: protocol ip prio 100 u32
+  sudo tc filter del dev $1 parent $ROOTID: protocol ip prio 100 u32
   #then delete classes (but root)
   for classfile in `htb_class_list`; do
     echo "classfile="$classfile
     htb_load_class $classfile
-    sudo tc class del dev $DEVICE parent 1:$PARENT classid 1:$CLASS
+    echo "tc class del dev $DEVICE parent $ROOTID:$PARENT classid $ROOTID:$CLASS"
+    sudo tc class del dev $DEVICE parent $ROOTID:$PARENT classid $ROOTID:$CLASS
   done #classfile
 } # minstop
 
@@ -638,7 +642,6 @@ minstop () {
 htb_load_class () {
 	DEVICE=${1%-*}
 	CLSIDS=`htb_clsid_chain $1`
-	CLSIDS2=$CLSIDS
 	CLASS=${CLSIDS##*:}; [ -z "$CLASS" ] &&
 		htb_fail_off "$1 has invalid class ID!"
 
@@ -655,7 +658,7 @@ htb_load_class () {
 	### Set defaults & load class
 	MTU=""; LEAF=none; PERTURB=10
 	RATE=""; BURST=""; CEIL=""; CBURST=""
-	PRIO=""; LIMIT=""; QUANTUM=""
+	PRIO=""; LIMIT=""; QUANTUM=""; DELAY=50
 	
 	PRIO_RULE=$PRIO_RULE_DEFAULT
 	PRIO_MARK=$PRIO_MARK_DEFAULT
@@ -771,7 +774,6 @@ if [ "$1" != "compile" -a "$2" != "nocache" -a -z "$HTB_DEBUG" ]; then
 	exec /bin/sh $HTB_CACHE 2> /dev/null
 fi
 
-ROOTID=5
 echo  "ROOTID=5"
 ### Setup root qdisc on all configured devices
   DEVICES=`htb_device_list`
@@ -804,6 +806,7 @@ for classfile in `htb_class_list`; do
 	echo "DEVICE=" $DEVICE
   echo "CLASS=" $CLASS
   echo "PARENT=" $PARENT
+  echo "LEAF=" $LEAF
 	### Create the class
 	tc class add dev $DEVICE parent $ROOTID:$PARENT classid $ROOTID:$CLASS \
 	htb rate $RATE ${CEIL:+ceil $CEIL} ${BURST:+burst $BURST} \
@@ -816,6 +819,8 @@ for classfile in `htb_class_list`; do
 			LEAFPARM="${PERTURB:+perturb $PERTURB} ${QUANTUM:+quantum $QUANTUM}"
 		elif [ "$LEAF" = "pfifo" -o "$LEAF" = "bfifo" ]; then
 			LEAFPARM="${LIMIT:+limit $LIMIT}"
+    elif [ "$LEAF" = "netem" ]; then
+      LEAFPARM="${DELAY:+delay ${DELAY}ms}"
 		else
 			htb_fail_off "unknown leaf qdisc ($LEAF) in $classfile!"
 		fi

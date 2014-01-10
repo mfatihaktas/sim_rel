@@ -1,44 +1,55 @@
 #!/usr/bin/python
-import sys,socket,json,getopt,struct,time,errno
+import sys,socket,json,getopt,struct,time,errno,logging
 import numpy as np
 
-TXCHUNK_SIZE = 4096
+TXCHUNK_SIZE = 1024 #4096
 
 class Sender(object):
-  def __init__(self, dst_addr, proto, datasize, tx_type, file_url):
-    self.dst_addr = dst_addr
-    self.proto = proto
-    self.datasize = datasize
-    self.tx_type = tx_type
-    self.file_url = file_url
-    self.sock = None
+  def __init__(self, dst_addr, proto, datasize, tx_type, file_url, logto):
+    if logto == 'file':
+      logging.basicConfig(filename='logs/s_tp_port=%s.log' % dst_addr[1], filemode='w', level=logging.DEBUG)
+    elif logto == 'console':
+      logging.basicConfig(level=logging.DEBUG)
+    else:
+      print 'Unexpected logto=%s' % logto
+      system.exit(2)
     #
-    if self.proto == 'tcp':
-      self.sock = None
-    elif self.proto == 'udp':
+    if proto == 'tcp':
+      self.sock = None #because; for every chunk being sent we are creating and connecting to dst another socket
+    elif proto == 'udp':
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
-      print 'Unknown proto=%s.', self.proto
+      logging.error('Unknown proto=%s.', self.proto)
       sys.exit(2)
+    self.proto = proto
+    #
+    if not (tx_type == 'dummy' or tx_type == 'file'):
+      logging.error('Unexpected tx_type=%s', tx_type)
+    self.tx_type = tx_type
+    #
+    self.dst_addr = dst_addr
+    self.datasize = datasize
+    self.file_url = file_url
+    #
   
   def init_send(self):
     if self.tx_type == 'dummy':
       #n = int(float(8*float(self.datasize)*1024/8/8))
-      n = int(float(8*float(4)*1024/8/8))
+      n = int(float(8*float(TXCHUNK_SIZE/1024)*1024/8/8))
       data = self.numpy_random(n)
       packer = struct.Struct('%sd' % n)
       data_str = packer.pack(*data)
       #
-      dur = self.dummy_send(data_str, self.datasize*1024/TXCHUNK_SIZE)
-      print 'dur=%s' % dur
+      self.dummy_send(data_str, self.datasize*1024/TXCHUNK_SIZE)
     elif self.tx_type == 'file':
       self.file_send()
   
   def file_send(self):
-    #TODO: This method needs to be rewritten according to threaded TCPServer approach
-    global TXCHUNK_SIZE
+    #TODO (??? ):This method needs to be rewritten according to threaded TCPServer approach
+    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.sock.connect(self.dst_addr)
     #
-    print 'start sending file'
+    logging.info('file_send started at time=%s', time.time() )
     time_s = time.time()
     f=open(self.file_url, "r")
     #
@@ -46,24 +57,23 @@ class Sender(object):
     l = f.read(TXCHUNK_SIZE)
     while (l):
       c_len_ = len(l)
-      #print 'sent size=%sB\n' % c_len_ #sys.getsizeof(l)
       len_ += c_len_
       if self.proto == 'tcp':
-      #
+        #
         try:
           self.sock.sendall(l)
         except socket.error, e:
           if isinstance(e.args, tuple):
-            print "errno=%d" % e[0]
+            logging.error('errno is %d', e[0])
             if e[0] == errno.EPIPE:
               # remote peer disconnected
-              print "Detected remote disconnect"
+              logging.error('Detected remote disconnect')
             else:
               # determine and handle different error
               pass
           else:
-            print "socket error ", e
-      #
+            logging.error('socket error=%s', e)
+        #
       elif self.proto == 'udp':
         self.sock.sendto(l, self.dst_addr)
       l = f.read(TXCHUNK_SIZE)
@@ -72,42 +82,45 @@ class Sender(object):
       self.sock.sendall('EOF')
     elif self.proto == 'udp':
       self.sock.sendto('EOF', self.dst_addr)
-    print 'EOF is txed.'
+    logging.info('EOF is txed.')
     #
     tx_dur = time.time() - time_s
-    print 'file_over_%s:%s is sent; size=%sB, dur=%ssec' % (self.proto,self.dst_addr,len_,tx_dur)
-    return tx_dur
+    logging.info('file_over_%s:%s is sent; size=%sB, dur=%ssec', self.proto,self.dst_addr,len_,tx_dur)
   
   def dummy_send(self, data, noftimes=1):
     time_s = time.time()
     nofBs_sent = 0
-    for i in range(0, noftimes):
+    logging.info('dummy_send started at time=%s', time.time() )
+    logging.info('noftimes=%s', noftimes)
+    for i in range(0, int(noftimes)):
       if self.proto == 'tcp':
         try:
           self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
           self.sock.connect(self.dst_addr)
           self.sock.sendall(data)
           datasize = sys.getsizeof(data)-37 #37 is python string format header length
-          print 'tcp_sent datasize=%sB' % datasize
+          logging.info('tcp_sent datasize=%sB', datasize)
           nofBs_sent += datasize
         except socket.error, e:
           if isinstance(e.args, tuple):
-            print "errno is %d" % e[0]
+            logging.error('errno is %d', e[0])
             if e[0] == errno.EPIPE:
-              print "Detected remote peer disconnected"
+              logging.error('Detected remote peer disconnected')
             else:
               # determine and handle different error
               pass
           else:
-            print "socket error ", e
+            logging.error('socket error')
       elif self.proto == 'udp':
         self.sock.sendto(data, self.dst_addr)
-        print 'udp_sent datasize=%sB' % sys.getsizeof(data)
+        datasize = sys.getsizeof(data)-37 #37 is python string format header length
+        nofBs_sent += datasize
+        logging.info('udp_sent datasize=%sB', sys.getsizeof(data))
     #
     tx_dur = time.time() - time_s
-    print 'dummy_over_%s is sent, to addr=%s' % (self.proto, self.dst_addr)
-    print 'nofBs_sent=%sB, dur=%ssec' % (nofBs_sent, tx_dur)
-    return tx_dur
+    logging.info('dummy_over_%s is sent, to addr=%s', self.proto, self.dst_addr)
+    logging.info('nofBs_sent=%sB, dur=%ssec', nofBs_sent, tx_dur)
+    logging.info('time=%s', time.time())
   
   def numpy_random(self, n):
     '''
@@ -148,11 +161,11 @@ class Sender(object):
       self.init_send()
   
 def main(argv):
-  dst_ip = dst_lport = proto = datasize = tx_type = file_url = None
+  dst_ip = dst_lport = proto = datasize = tx_type = file_url = logto = None
   try:
-    opts, args = getopt.getopt(argv,'',['dst_ip=','dst_lport=','proto=','datasize=','tx_type=', 'file_url='])
+    opts, args = getopt.getopt(argv,'',['dst_ip=','dst_lport=','proto=','datasize=','tx_type=', 'file_url=', 'logto='])
   except getopt.GetoptError:
-    print 'sender.py --dst_ip=<> --dst_lport=<> --proto=tcp/udp --datasize=Mb --tx_type=dummy/file --file_url=<>'
+    print 'sender.py --dst_ip=<> --dst_lport=<> --proto=tcp/udp --datasize=Mb --tx_type=dummy/file --file_url=<> --logto=<>'
     sys.exit(2)
   #Initializing variables with comman line options
   for opt, arg in opts:
@@ -176,14 +189,15 @@ def main(argv):
         sys.exit(2)
     elif opt == '--file_url':
       file_url = arg
+    elif opt == '--logto':
+      logto = arg
   #
-  #print 'dst_ip=%s, dst_lport=%s, proto=%s, datasize=%s' % (dst_ip, dst_lport, proto, datasize)
-  dst_ip, dst_lport, proto, datasize
   ds = Sender(dst_addr = (dst_ip, dst_lport),
               proto = proto,
               datasize = datasize,
               tx_type = tx_type,
-              file_url = file_url )
+              file_url = file_url,
+              logto = logto )
   ds.test()
   #
   raw_input('Enter')

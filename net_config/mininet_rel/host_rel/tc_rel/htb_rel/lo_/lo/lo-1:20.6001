@@ -2,5 +2,5 @@
 RATE=30Kbit
 CEIL=35Kbit
 BURST=15k
-LEAF=sfq
 RULE=*:6001
+#LEAF=sfq
