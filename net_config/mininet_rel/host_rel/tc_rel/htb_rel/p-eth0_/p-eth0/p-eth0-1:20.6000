@@ -1,5 +1,5 @@
 # class for outgoing :6000 traffic
-RATE=1Mbit
+RATE=100Mbit
 BURST=15k
 RULE=*:6000
 LEAF=netem

@@ -24,7 +24,7 @@ elif [ $1  = 'c' ]; then
   python consumer.py --intf=c-eth0 --cl_port_list=6000,6001,6002 --dtst_port=7000 --dtsl_ip=10.0.0.255 --dtsl_port=7000 \
                      --proto=tcp --rx_type=dummy --logto=console
 elif [ $1  = 't' ]; then
-  python transit.py --nodename=mfa --intf=lo --dtsl_ip=127.0.0.1 --dtsl_port=7002 --dtst_port=7001 --logto=console
+  python transit.py --nodename=mfa --intf=lo --dtsl_ip=127.0.0.1 --dtsl_port=7002 --dtst_port=7001 --logto=file --trans_type=file
 elif [ $1  = 't11' ]; then
   python transit.py --nodename=t11 --intf=eth0 --dtsl_ip=10.0.0.255 --dtsl_port=7001 --dtst_port=7001 --logto=file
 elif [ $1  = 't21' ]; then
@@ -46,7 +46,7 @@ elif [ $1  = 'rd' ]; then
 elif [ $1  = 'rc' ]; then
   python receiver.py --lintf=c-eth0 --lport=6000 --proto=tcp --rx_type=dummy --file_url=rx.dat --logto=console
 elif [ $1  = 'glf' ]; then
-	dd if=/dev/urandom of=ltx.dat bs=1024 count=10240 #1024
+	dd if=/dev/urandom of=ltx.dat bs=1024 count=1024
 elif [ $1  = 'iperf-ts1' ]; then
   iperf -s -p 6000
 elif [ $1  = 'iperf-tc1' ]; then

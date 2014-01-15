@@ -98,7 +98,6 @@ class ControlCommIntf(object):
   def __init__(self):
     #commpair_id : {'s_addr':(ip,port), 'c_addr'=(ip,port), 'server'=<>}
     self.commpair_info_dict = {}
-    logging.basicConfig(level=logging.DEBUG)
   
   def reg_commpair(self, sctag,proto,_recv_callback, s_addr,c_addr):
     #create server,sock

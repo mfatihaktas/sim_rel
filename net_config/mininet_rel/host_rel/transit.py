@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import sys,logging,getopt,commands,pprint
-import SocketServer,threading,time,socket
+import sys,getopt,commands,pprint,mmap,logging,os
+import SocketServer,threading,time,socket,thread
 from errors import CommandLineOptionError,NoItruleMatchError
 from control_comm_intf import ControlCommIntf
 
@@ -15,7 +15,382 @@ def get_addr(lintf):
   intf_eth0_ip = commands.getoutput("ip address show dev " + intf_eth0).split()
   intf_eth0_ip = intf_eth0_ip[intf_eth0_ip.index('inet') + 1].split('/')[0]
   return intf_eth0_ip
-##########################  UDP Server-Handler  ################################
+
+CHUNKSIZE = 1024 #B
+NUMCHUNKS_AFILE = 100
+RXED_SIZE = -1
+
+##########################  File TCP Server-Handler  ###########################
+class FilePipeServer():
+  def __init__(self, server_addr, itwork_dict, to_addr):
+    self.server_addr = server_addr
+    self.s_tp_dst = int(self.server_addr[1])
+    self.itwork_dict = itwork_dict
+    self.to_addr = to_addr
+    #
+    self.sc_handler = None
+    self.server_sock = None
+    self.itserv_handler = None
+
+  def open_socket(self):
+    try:
+      self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.server_sock.bind(self.server_addr)
+      self.server_sock.listen(0) #only single client can be served
+    except socket.error, (value,message):
+      if self.server_sock:
+        self.server_sock.close()
+      logging.error('filepipe_server:: Could not open socket=%s', message )
+      sys.exit(2)
+
+  def start(self):    
+    self.open_socket()
+    logging.debug('filepipe_server:: serversock_stpdst=%s is opened; waiting for client.', self.s_tp_dst)
+
+    self.sc_handler = SessionClientHandler(self.server_sock.accept(),
+                                           itwork_dict = self.itwork_dict,
+                                           to_addr = self.to_addr,
+                                           s_tp_dst = self.s_tp_dst )
+    self.sc_handler.start()
+    #
+    self.itserv_handler = ItServiceHandler(itwork_dict = self.itwork_dict,
+                                           s_tp_dst = self.s_tp_dst,
+                                           to_addr = self.to_addr )
+    self.itserv_handler.start()
+    #
+    logging.debug('filepipe_server:: server_addr=%s started.', self.server_addr)
+    #threads will handle the rest no need for further listening
+    self.server_sock.close()
+    logging.debug('filepipe_server:: done.')
+    
+
+  def shutdown(self):
+    logging.info('filepipe_server:: shutdown.')
+
+class SessionClientHandler(threading.Thread):
+  def __init__(self,(sclient_sock,sclient_addr), itwork_dict, to_addr, s_tp_dst):
+    threading.Thread.__init__(self)
+    self.setDaemon(True)
+    #
+    self.sclient_sock = sclient_sock
+    self.sclient_addr = sclient_addr
+    self.s_tp_dst = s_tp_dst
+    #for now pipe is list of files
+    #num_chunks_in_file chunks will be stored in a single file
+    #NUMCHUNKS_AFILE % recv_size = 0
+    self.recv_size = 1 #chunks
+    self.num_chunks_in_file = NUMCHUNKS_AFILE
+    self.pipe_size = 0 #chunks
+    self.pipe_size_B = 0
+
+    self.pipe_file_base_str = 'pipe/pipe_tpdst=%s_' % self.s_tp_dst
+    self.pipe_file_id = 0
+    self.pipe_mm = None
+    #session soft expire...
+    self.s_soft_expired = False
+    self.s_active_last_time = None
+    self.s_soft_state_span = 1000 #secs
+    soft_expire_timer = threading.Timer(self.s_soft_state_span,
+                                        self.handle_s_softexpire )
+    soft_expire_timer.daemon = True
+    soft_expire_timer.start()
+    #
+    self.session_over = False
+    #
+    self.check_file = open('pipe/checkfile.dat', 'w')
+    
+  def run(self):
+    logging.debug('session_client_handler:: sclient_addr=%s started', self.sclient_addr)
+    rxcomplete = False
+    while not rxcomplete:
+      data = self.sclient_sock.recv(self.recv_size*CHUNKSIZE)
+      datasize = sys.getsizeof(data) - 37 #in MB
+      logging.info('session_client_handler:: stpdst=%s; rxed datasize=%sB, pipe_size=%s, pipe_size_B=%sB', self.s_tp_dst, datasize, self.pipe_size, self.pipe_size_B)
+      if datasize < 50:
+        logging.debug('data=%s', data)
+      #
+      if data == 'EOF':
+        global RXED_SIZE
+        RXED_SIZE = self.pipe_size
+        logging.info('session_client_handler:: EOF is rxed...')
+        rxcomplete = True
+        continue
+      #
+      self.push_to_pipe(data, datasize)
+      self.check_file.write(data)
+    #
+    logging.debug('session_client_handler:: done.')
+    self.check_file.close()
+
+  def push_to_pipe(self, data, datasize):
+    if self.pipe_size % self.num_chunks_in_file == 0: #time for new pipe_file
+      if self.pipe_mm != None:
+        #thread.start_new_thread(self.flush_pipe_mm, (self.pipe_mm, self.pipe_file_id) )
+        self.flush_pipe_mm()
+        self.pipe_file_id += 1
+      #
+      try:
+        self.pipe_mm = mmap.mmap(fileno = -1, length = self.num_chunks_in_file*(CHUNKSIZE+37) )
+      except Exception, e:
+        logging.error('session_client_handler:: Could not open file=:%s.dat', fileurl)
+        logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
+        sys.exit(2)
+      #
+    #
+    try:
+      self.pipe_mm.write(data)
+      self.pipe_size += self.recv_size
+      self.pipe_size_B += datasize
+    except TypeError as e:
+      logging.error('session_client_handler:: Could not write to pipe_mm. Check mmap.access')
+      logging.error('e.errno=%s, e.strerror=%s', e.errno, e.strerror)
+    #
+    logging.debug('session_client_handler:: datasize=%s is pushed to pipe.', datasize)
+    self.s_active_last_time = time.time()
+  
+  def flush_pipe_mm(self):
+    fileurl = self.pipe_file_base_str+str(self.pipe_file_id)
+    pipe_file = open(fileurl+'.dat', 'w')
+    pipe_file.write(self.pipe_mm[:])
+    pipe_file.close()
+    self.pipe_mm.close()
+    self.pipe_mm = None
+    logging.debug('session_client_handler:: pipe_file_id=%s is ready', self.pipe_file_id)
+
+  '''
+  def flush_pipe_mm(self, pipe_mm, pipe_file_id):
+    fileurl = self.pipe_file_base_str+str(pipe_file_id)
+    pipe_file = open(fileurl+'.dat', 'w')
+    pipe_file.write(pipe_mm[:])
+    pipe_file.close()
+    pipe_mm.close()
+    logging.debug('session_client_handler:: pipe_file_id=%s is ready', pipe_file_id)
+  '''
+  def handle_s_softexpire(self):
+    while True:
+      #logging.debug('handle_s_softexpire::')
+      inactive_time_span = time.time() - self.s_active_last_time
+      if inactive_time_span >= self.s_soft_state_span:
+        self.s_soft_expired = True
+        logging.info('session_client_handler:: session_tp_dst=%s soft-expired.',self.s_tp_dst)
+        return
+      # do every ... secs
+      time.sleep(self.s_soft_state_span)
+
+class ItServiceHandler(threading.Thread):
+  def __init__(self, itwork_dict, s_tp_dst, to_addr):
+    threading.Thread.__init__(self)
+    self.setDaemon(True)
+    #
+    self.itwork_dict = itwork_dict
+    self.s_tp_dst = s_tp_dst
+    self.to_addr = to_addr
+    #
+    self.itfunc_dict = {'f0':self.f0,
+                        'f1':self.f1,
+                        'f2':self.f2,
+                        'f3':self.f3,
+                        'f4':self.f4 }
+    self.func_comp_dict = {'f0':0.5,
+                           'f1':1,
+                           'f2':2,
+                           'f3':3,
+                           'f4':4 }
+    #
+    self.num_chunks_in_file = NUMCHUNKS_AFILE
+    #num_chunks_in_file % serv_size = 0
+    self.serv_size = 1 #chunks
+    self.served_size = 0 #chunks
+    self.served_size_ = 0 #chunks, keeps for current file
+    #
+    self.pipe_file_base_str = 'pipe/pipe_tpdst=%s_' % self.s_tp_dst
+    self.pipe_file_id = 0
+    self.pipe_file = None
+    self.pipe_mm = None
+    #
+    self.max_idle_time = 5 #_after_serv_started, secs
+    self.active_last_time = None
+    self.serv_started = False
+    self.serv_over = False
+    #
+    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.forwarding_started = False
+    #for test...
+    self.test_file = open('pipe/testfile.dat', 'w')
+    self.test_file_size = 0 #serv_size
+    self.test_file_size_ = 0 #B
+    self.served_size_B = 0 #B
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~  IT functional interface  ~~~~~~~~~~~~~~~~~~~~~~~~#
+  def run(self):
+    logging.debug('itserv_handler:: run.')
+    while not self.serv_over:
+      data = self.pop_from_pipe()
+      if data != None:
+        if not self.serv_started:
+          self.serv_started = True
+        #
+        self.active_last_time = time.time()
+        #data_ = self.proc(data, self.serv_size)
+        #self.forward_data(data_, self.serv_size)
+        self.test_file.write(data)
+        self.test_file_size += self.serv_size
+        self.test_file_size_ += (sys.getsizeof(data) - 37)
+        logging.debug('itserv_handler:: test_file_size=%s, test_file_size_=%sB', self.test_file_size, self.test_file_size_)
+      else:
+        if RXED_SIZE != -1 and self.served_size == RXED_SIZE:
+          logging.debug('itserv_handler:: RXED_SIZE=%s', RXED_SIZE)
+          self.serv_over = True
+        if self.serv_started and ((time.time()-self.active_last_time) >= self.max_idle_time):
+          self.serv_over = True
+    #
+    logging.info('itserv_handler:: done.')
+    self.test_file.close()
+
+  def pop_from_pipe(self):
+    if self.served_size % self.num_chunks_in_file == 0:
+      if self.pipe_file != None and self.pipe_mm != None: #time to move to next file
+        #logging.debug('served_size=%s', self.served_size)
+        #thread.start_new_thread(self.delete_pipe_file, (self.pipe_mm, self.pipe_file, pipe_file_id_) )
+        self.delete_pipe_file()
+        self.served_size_ = 0
+        self.pipe_file_id += 1
+      #
+      try:
+        fileurl = self.pipe_file_base_str+str(self.pipe_file_id)
+        self.pipe_file = open(fileurl+'.dat', 'r+')
+        self.pipe_mm = mmap.mmap(fileno = self.pipe_file.fileno(),
+                                 length = 0 )
+      except Exception, e:
+        #logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
+        #sys.exit(2)
+        return None
+    #
+    try:
+      datasize = self.serv_size*CHUNKSIZE
+      i = self.served_size_*datasize
+      j = (self.served_size_+1)*datasize
+      chunk = self.pipe_mm[i:j]
+      self.served_size += self.serv_size
+      self.served_size_ += self.serv_size
+      #
+      chunk_size = sys.getsizeof(chunk) - 37
+      self.served_size_B += chunk_size
+      #
+      logging.debug('itserv_handler:: datasize=%s is poped from pipe.\nserved_size=%s\nserved_size_=%s', datasize,self.served_size,self.served_size_)
+      logging.debug('itserv_handler:: popped chunk_size=%sB, served_size_B=%sB', chunk_size, self.served_size_B)
+      return chunk
+    except Exception, e:
+      #logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
+      #sys.exit(2)
+      return None
+
+  def delete_pipe_file(self):
+    self.pipe_mm.close()
+    self.pipe_mm = None
+    self.pipe_file.close()
+    self.pipe_file = None
+    #
+    fileurl = self.pipe_file_base_str+str(self.pipe_file_id)+'.dat'
+    '''
+    try:
+      os.remove(fileurl)
+    except OSError, e:
+      logging.error('itserv_handler:: for fileurl=%s' % fileurl)
+      logging.error('Error: %s - %s.' % (e.errno,e.strerror))
+      #self.serv_over = True
+      return
+    '''
+    #
+    logging.debug('itserv_handler:: pipe_file_id=%s is deleted from pipe', self.pipe_file_id)
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~  IT data transport  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  def forward_data(self, data, datasize):
+    if not self.forwarding_started:
+      logging.info('itserv_handler:: itserv_sock is trying to connect to addr=%s', self.to_addr)
+      self.sock.connect(self.to_addr)
+      self.forwarding_started = True
+    #
+    self.sock.sendall(data)
+    logging.info('itserv_handler:: datasize=%s forwarded to_addr=%s', datasize, to_addr)
+  
+  #~~~~~~~~~~~~~~~~~~~~~~~~~  IT data manipulation  ~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  def proc(self, data, datasize):
+    #datasize is in B, datasize_ is in Mb
+    datasize_ = float(8*datasize)/1024
+    #
+    jobtobedone = self.itwork_dict['jobtobedone']
+    proc_cap = self.itwork_dict['proc']
+    data_ = None
+    for ftag in jobtobedone:
+      data_ = self.itfunc_dict[ftag](datasize_, data, proc_cap)
+      #
+      datasize_ = float(8*getsizeof(data_))/1024
+      data = data_
+    #
+    return data
+
+  def proc_time_model(self, datasize, func_comp, proc_cap):
+    '''
+    proc_time_model used in sching process. To see if the sching results can be reaklized
+    by assuming used models for procing are perfectly accurate.
+    '''
+    proc_t = 1000*float(func_comp)*float(float(datasize)/64)*float(1/float(proc_cap)) #(ms)
+    #logging.info('1000*%s*(%s/64)*(1/%s)=%s', func_comp, datasize, proc_cap, proc_t)
+    return proc_t
+    
+  # transit data manipulation functions
+  def f0(self, datasize, data, proc_cap):
+    logging.info('itserv_handler:: f0 is on action')
+    t_sleep = self.proc_time_model(datasize = datasize,
+                                   func_comp = self.func_comp_dict['f0'],
+                                   proc_cap = proc_cap)
+    logging.info('itserv_handler:: f0_sleep=%s', t_sleep)
+    time.sleep(t_sleep)
+    #for now no manipulation on data, just move the data forward !
+    return data
+    
+  def f1(self, datasize, data, proc_cap):
+    logging.info('itserv_handler:: f1 is on action')
+    t_sleep = self.proc_time_model(datasize = datasize,
+                                   func_comp = self.func_comp_dict['f1'],
+                                   proc_cap = proc_cap)
+    logging.info('itserv_handler:: f1_sleep=%s', t_sleep)
+    time.sleep(t_sleep)
+    #for now no manipulation on data, just move the data forward !
+    return data
+    
+  def f2(self, datasize, data, proc_cap):
+    logging.info('itserv_handler:: f2 is on action')
+    t_sleep = self.proc_time_model(datasize = datasize,
+                                   func_comp = self.func_comp_dict['f2'],
+                                   proc_cap = proc_cap)
+    logging.info('itserv_handler:: f2_sleep=%s', t_sleep)
+    time.sleep(t_sleep)
+    #for now no manipulation on data, just move the data forward !
+    return data
+    
+  def f3(self, datasize, data, proc_cap):
+    logging.info('itserv_handler:: f3 is on action')
+    t_sleep = self.proc_time_model(datasize = datasize,
+                                   func_comp = self.func_comp_dict['f3'],
+                                   proc_cap = proc_cap)
+    logging.info('itserv_handler:: f3_sleep=%s', t_sleep)
+    time.sleep(t_sleep)
+    #for now no manipulation on data, just move the data forward !
+    return data
+    
+  def f4(self, datasize, data, proc_cap):
+    logging.info('itserv_handler:: f4 is on action')
+    t_sleep = self.proc_time_model(datasize = datasize,
+                                   func_comp = self.func_comp_dict['f4'],
+                                   proc_cap = proc_cap)
+    logging.info('itserv_handler:: f4_sleep=%s', t_sleep)
+    time.sleep(t_sleep)
+    #for now no manipulation on data, just move the data forward !
+    return data
+
+##########################  Dummy UDP Server-Handler  ##########################
 class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
   def __init__(self, call_back, server_addr, RequestHandlerClass):
     SocketServer.UDPServer.__init__(self, server_addr, RequestHandlerClass)
@@ -32,7 +407,7 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
     logging.info('cur_udp_thread=%s; s_tp_dst=%s, rxed_data_size=%sB', cur_thread.name, s_tp_dst, datasize)
     #
     server.call_back(s_tp_dst, data, datasize)
-##########################  TCP Server-Handler  ################################
+##########################  Dummy TCP Server-Handler  ##########################
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
   def __init__(self, call_back, server_addr, RequestHandlerClass):
     SocketServer.TCPServer.__init__(self, server_addr, RequestHandlerClass)
@@ -40,7 +415,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
   
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
   def handle(self):
-    data = self.request.recv(4096)
+    data = self.request.recv(CHUNKSIZE)
     #
     cur_thread = threading.current_thread()
     server = self.server
@@ -51,7 +426,11 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     server.call_back(s_tp_dst, data, datasize)
 #############################  Class Transit  ##################################
 class Transit(object):
-  def __init__(self, nodename, tl_ip, tl_port, dtsl_ip, dtsl_port):
+  def __init__(self, nodename, tl_ip, tl_port, dtsl_ip, dtsl_port, trans_type):
+    if not (trans_type == 'file' or trans_type == 'console'):
+      logging.error('Unexpected trans_type=%s', trans_type)
+    self.trans_type = trans_type
+    #
     self.nodename = nodename
     self.tl_ip = tl_ip
     self.tl_port = tl_port
@@ -85,8 +464,7 @@ class Transit(object):
       for s_tp_dst, s_info in self.s_info_dict.items():
         inactive_time_span = time.time() - s_info['s_active_last_time']
         if inactive_time_span >= self.session_soft_state_span: #soft state expire
-          s_info['s_server'].shutdown()
-          s_info['s_sock'].close()
+          s_info['s_server_thread'].shutdown()
           del self.s_info_dict[s_tp_dst]
           logging.info('inactive_time_span=%s\ns with tp_dst:%s is soft-expired.',inactive_time_span,s_tp_dst)
       #
@@ -127,38 +505,44 @@ class Transit(object):
                                 func_comp = float(data_['comp']),
                                 proc_cap = float(data_['proc']))
     #
-    (s_server, s_server_thread) = self.create_s_server(proto = proto, port = stpdst)
-    self.s_info_dict[stpdst] = {'itjobrule':data_,
-                                'proto': proto,
-                                'to_addr': to_addr,
-                                's_server': s_server,
-                                #'s_server_thread': s_server_thread,
-                                's_sock':self.create_s_sock(proto = proto,
-                                                            to_addr = to_addr),
-                                's_active_last_time':time.time(),
-                                'est_proct': est_proct,
-                                's_data_rxed': False }
+    if self.trans_type == 'file':
+      s_server_thread = FilePipeServer(server_addr = (self.tl_ip, stpdst),
+                                       itwork_dict = data_,
+                                       to_addr = to_addr )
+      s_server_thread.start()
+      self.s_info_dict[stpdst] = {'itjobrule':data_,
+                                  'to_addr': to_addr,
+                                  's_server_thread': s_server_thread,
+                                  'est_proct': est_proct }
+    elif self.trans_type == 'dummy':
+      self.s_info_dict[stpdst] = {'itjobrule':data_,
+                                  'proto': proto,
+                                  'to_addr': to_addr,
+                                  's_server_thread': self.create_sserver_thread(proto = proto, port = stpdst),
+                                  's_active_last_time':time.time(),
+                                  'est_proct': est_proct }
     #
     logging.info('welcome new_s; tpdst=%s, s_info=\n%s', stpdst, pprint.pformat(self.s_info_dict[stpdst]))
   
   def bye_s(self, stpdst):
-    self.s_info_dict[stpdst]['s_server'].shutdown()
-    self.s_info_dict[stpdst]['s_sock'].close()
+    if self.trans_type == 'dummy':
+      self.s_info_dict[stpdst]['s_server_thread'].shutdown()
+    elif self.trans_type == 'file':
+      self.s_info_dict[stpdst]['s_server_thread'].close()
     #ready to erase s_info
     del self.s_info_dict[stpdst]
     logging.info('bye s; tpdst=%s', stpdst)
   
-  #########################  handle s_data_traffic  ############################
-  def create_s_sock(self, proto, to_addr): #return udp sock
-    if proto == 6:
-      return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    elif proto == 17:
-      return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    else:
-      logging.error('Unexpected proto=%s', proto)
-      return
+  def shutdown(self):
+    logging.debug('shutting down...')
+    for s_tp_dst, s_info in self.s_info_dict.items():
+      s_info['s_server_thread'].shutdown()
+      logging.debug('thread for server_s_tp_dst=%s is terminated', s_tp_dst)
+    #this may close created sub-threads
+    sys.exit(2)
   
-  def create_s_server(self, proto, port):
+  #########################  handle s_data_traffic  ############################
+  def create_sserver_thread(self, proto, port):
     s_addr = (self.tl_ip, port)
     s_server = None
     if proto == 6:
@@ -169,12 +553,12 @@ class Transit(object):
       logging.error('Unexpected proto=%s', proto)
       return
     #
-    s_server_thread = threading.Thread(target=s_server.serve_forever)
+    s_server_thread = threading.Thread(target=s_server_thread.serve_forever)
     s_server_thread.daemon = True
     s_server_thread.start()
     #
-    logging.info('%s_server is started at s_addr=%s', proto,s_addr )
-    return (s_server, s_server_thread)
+    logging.info('%s_server_thread is started at s_addr=%s', proto,s_addr )
+    return s_server
   
   def _handle_recvsdata(self, s_tp_dst, data, datasize):
     if not s_tp_dst in self.s_info_dict:
@@ -183,8 +567,8 @@ class Transit(object):
     #
     """
     data_ = self.proc_pipeline(s_tp_dst = s_tp_dst,
-                              data = data,
-                              datasize = datasize )
+                               data = data,
+                               datasize = datasize )
     """
     data_ = data
     datasize_ = sys.getsizeof(data_)
@@ -217,7 +601,7 @@ class Transit(object):
     proto = s_info['proto']
     to_addr = s_info['to_addr']
     #
-    sock = s_info['s_sock']
+    sock = None
     if proto == 6:
       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       logging.info('s_tcpsock is trying to connect to addr=%s', to_addr)
@@ -231,6 +615,17 @@ class Transit(object):
     #update session_active_last_time
     s_info['s_active_last_time']=time.time()
   
+  def test(self):
+    logging.debug('test')
+    data = {'comp': 1.99999998665,
+            'proto': 6,
+            'data_to_ip': u'10.0.0.1',
+            'datasize': 1.0,
+            'itfunc_dict': {u'f1': 1.0, u'f2': 0.99999998665},
+            'proc': 183.150248167,
+            's_tp': 6000 }
+    self.welcome_s(data)
+
 ############################  IT data manipulation  ############################
 func_comp_dict = {'f0':0.5,
                   'f1':1,
@@ -305,11 +700,11 @@ itfunc_dict = {'f0':f0,
                'f4':f4}
   
 def main(argv):
-  nodename = intf = dtsl_ip = dtsl_port= dtst_port = logto = None
+  nodename = intf = dtsl_ip = dtsl_port= dtst_port = logto = trans_type = None
   try:
-    opts, args = getopt.getopt(argv,'',['nodename=','intf=','dtsl_ip=','dtsl_port=','dtst_port=','logto='])
+    opts, args = getopt.getopt(argv,'',['nodename=','intf=','dtsl_ip=','dtsl_port=','dtst_port=','logto=','trans_type='])
   except getopt.GetoptError:
-    print 'transit.py --nodename=<> --intf=<> --dtsl_ip=<> --dtsl_port=<> --dtst_port=<> --logto=<>'
+    print 'transit.py --nodename=<> --intf=<> --dtsl_ip=<> --dtsl_port=<> --dtst_port=<> --logto=<> --trans_type=<>'
     sys.exit(2)
   #Initializing global variables with comman line options
   for opt, arg in opts:
@@ -325,6 +720,8 @@ def main(argv):
       dtst_port = int(arg)
     elif opt == '--logto':
       logto = arg
+    elif opt == '--trans_type':
+      trans_type = arg
   #where to log, console or file
   if logto == 'file':
     fname = 'logs/'+nodename+'.log'
@@ -335,14 +732,17 @@ def main(argv):
     raise CommandLineOptionError('Unexpected logto', logto)
   #
   tl_ip = get_addr(intf)
-  Transit(nodename = nodename,
-          tl_ip = tl_ip,
-          tl_port = dtst_port,
-          dtsl_ip = dtsl_ip,
-          dtsl_port = dtsl_port )
+  tr = Transit(nodename = nodename,
+               tl_ip = tl_ip,
+               tl_port = dtst_port,
+               dtsl_ip = dtsl_ip,
+               dtsl_port = dtsl_port,
+               trans_type = trans_type )
+  tr.test()
   #
-  #raw_input('Enter')
-  time.sleep(100000)
+  raw_input('Enter')
+  tr.shutdown()
+  #time.sleep(100000)
   
 if __name__ == "__main__":
   main(sys.argv[1:])
