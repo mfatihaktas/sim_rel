@@ -17,7 +17,7 @@ def get_addr(lintf):
   return intf_eth0_ip
 
 CHUNKSIZE = 1024 #B
-NUMCHUNKS_AFILE = 100
+NUMCHUNKS_AFILE = 10
 RXED_SIZE = -1
 
 ##########################  File TCP Server-Handler  ###########################
@@ -81,6 +81,7 @@ class SessionClientHandler(threading.Thread):
     self.recv_size = 1 #chunks
     self.num_chunks_in_file = NUMCHUNKS_AFILE
     self.pipe_size = 0 #chunks
+    self.pipe_size_ = 0 #chunks
     self.pipe_size_B = 0
 
     self.pipe_file_base_str = 'pipe/pipe_tpdst=%s_' % self.s_tp_dst
@@ -110,6 +111,7 @@ class SessionClientHandler(threading.Thread):
         logging.debug('data=%s', data)
       #
       if data == 'EOF':
+        self.flush_pipe_mm()
         global RXED_SIZE
         RXED_SIZE = self.pipe_size
         logging.info('session_client_handler:: EOF is rxed...')
@@ -130,9 +132,8 @@ class SessionClientHandler(threading.Thread):
         self.pipe_file_id += 1
       #
       try:
-        self.pipe_mm = mmap.mmap(fileno = -1, length = self.num_chunks_in_file*(CHUNKSIZE+37) )
+        self.pipe_mm = mmap.mmap(fileno = -1, length = self.num_chunks_in_file*CHUNKSIZE) #(CHUNKSIZE+37) )
       except Exception, e:
-        logging.error('session_client_handler:: Could not open file=:%s.dat', fileurl)
         logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
         sys.exit(2)
       #
@@ -140,6 +141,7 @@ class SessionClientHandler(threading.Thread):
     try:
       self.pipe_mm.write(data)
       self.pipe_size += self.recv_size
+      self.pipe_size_ += self.recv_size
       self.pipe_size_B += datasize
     except TypeError as e:
       logging.error('session_client_handler:: Could not write to pipe_mm. Check mmap.access')
@@ -155,7 +157,10 @@ class SessionClientHandler(threading.Thread):
     pipe_file.close()
     self.pipe_mm.close()
     self.pipe_mm = None
+    #
     logging.debug('session_client_handler:: pipe_file_id=%s is ready', self.pipe_file_id)
+    logging.debug('session_client_handler:: BTW pipe_size_=%s is flushed', self.pipe_size_)
+    self.pipe_size_ = 0
 
   '''
   def flush_pipe_mm(self, pipe_mm, pipe_file_id):
@@ -218,14 +223,14 @@ class ItServiceHandler(threading.Thread):
     #for test...
     self.test_file = open('pipe/testfile.dat', 'w')
     self.test_file_size = 0 #serv_size
-    self.test_file_size_ = 0 #B
+    self.test_file_size_B = 0 #B
     self.served_size_B = 0 #B
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~  IT functional interface  ~~~~~~~~~~~~~~~~~~~~~~~~#
   def run(self):
     logging.debug('itserv_handler:: run.')
     while not self.serv_over:
-      data = self.pop_from_pipe()
+      (data, datasize) = self.pop_from_pipe()
       if data != None:
         if not self.serv_started:
           self.serv_started = True
@@ -233,10 +238,14 @@ class ItServiceHandler(threading.Thread):
         self.active_last_time = time.time()
         #data_ = self.proc(data, self.serv_size)
         #self.forward_data(data_, self.serv_size)
+        self.served_size += self.serv_size
+        self.served_size_ += self.serv_size
+        self.served_size_B += datasize
+        #
         self.test_file.write(data)
         self.test_file_size += self.serv_size
-        self.test_file_size_ += (sys.getsizeof(data) - 37)
-        logging.debug('itserv_handler:: test_file_size=%s, test_file_size_=%sB', self.test_file_size, self.test_file_size_)
+        self.test_file_size_B += datasize
+        logging.debug('itserv_handler:: acted on datasize=%s, test_file_size=%s, test_file_size_B=%sB, served_size=%s, served_size_=%s', datasize, self.test_file_size, self.test_file_size_B, self.served_size, self.served_size_)
       else:
         if RXED_SIZE != -1 and self.served_size == RXED_SIZE:
           logging.debug('itserv_handler:: RXED_SIZE=%s', RXED_SIZE)
@@ -260,30 +269,28 @@ class ItServiceHandler(threading.Thread):
         fileurl = self.pipe_file_base_str+str(self.pipe_file_id)
         self.pipe_file = open(fileurl+'.dat', 'r+')
         self.pipe_mm = mmap.mmap(fileno = self.pipe_file.fileno(),
-                                 length = 0 )
+                                 length = 0,
+                                 access=mmap.ACCESS_READ )
+        logging.debug('itserv_handler:: pipe_mm.size()=%s', self.pipe_mm.size())
       except Exception, e:
         #logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
+        #logging.error('served_size=%s\npipe_file_id=%s', self.served_size, self.pipe_file_id)
         #sys.exit(2)
-        return None
+        return (None, 0)
     #
     try:
       datasize = self.serv_size*CHUNKSIZE
-      i = self.served_size_*datasize
-      j = (self.served_size_+1)*datasize
-      chunk = self.pipe_mm[i:j]
-      self.served_size += self.serv_size
-      self.served_size_ += self.serv_size
-      #
+      #i = self.served_size_*datasize
+      #j = (self.served_size_+1)*datasize
+      #chunk = self.pipe_mm[i:j]
+      chunk = self.pipe_mm.read(datasize)
       chunk_size = sys.getsizeof(chunk) - 37
-      self.served_size_B += chunk_size
       #
-      logging.debug('itserv_handler:: datasize=%s is poped from pipe.\nserved_size=%s\nserved_size_=%s', datasize,self.served_size,self.served_size_)
-      logging.debug('itserv_handler:: popped chunk_size=%sB, served_size_B=%sB', chunk_size, self.served_size_B)
-      return chunk
+      return (chunk, chunk_size)
     except Exception, e:
       #logging.error('\ne.__doc__=%s\n e.message=%s', e.__doc__, e.message)
       #sys.exit(2)
-      return None
+      return (None, 0)
 
   def delete_pipe_file(self):
     self.pipe_mm.close()

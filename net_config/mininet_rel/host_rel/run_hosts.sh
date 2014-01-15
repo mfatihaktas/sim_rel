@@ -46,7 +46,7 @@ elif [ $1  = 'rd' ]; then
 elif [ $1  = 'rc' ]; then
   python receiver.py --lintf=c-eth0 --lport=6000 --proto=tcp --rx_type=dummy --file_url=rx.dat --logto=console
 elif [ $1  = 'glf' ]; then
-	dd if=/dev/urandom of=ltx.dat bs=1024 count=1024
+	dd if=/dev/urandom of=ltx.dat bs=1024 count=100 #1024
 elif [ $1  = 'iperf-ts1' ]; then
   iperf -s -p 6000
 elif [ $1  = 'iperf-tc1' ]; then
